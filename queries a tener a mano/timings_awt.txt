@@ -1,0 +1,439 @@
+declare dinf default date_sub(date_trunc(current_date(), week(monday)), interval 2 week); 
+
+insert `peya-chile.automated_tables_reports.timings_awt` 
+
+with hdm as ( 
+  SELECT   safe_cast(order_code as int64) order_code, country_code, created_date, estimated_pickup_at,requested_pickup_at, case when requested_pickup_at is not null then True else False end as ajuste_ept, high_demand_mode.is_hd_order as hd_order , high_demand_mode.author ,high_demand_mode.minutes_added , high_demand_mode.duration 
+FROM `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_orders` o 
+where true
+and created_date >= dinf -1 
+and country_code ="cl"
+)
+
+,vbo as (
+select distinct
+safe_cast(v.vendor_code as integer) vendor_code
+, v.vertical_type
+, ve.client.name client_name
+, latest.vendor_grade latest_vendor_grade
+FROM `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendors` v
+left join unnest(vendor) ve
+left join `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_attributes_latest` latest on latest.vendor_code = v.vendor_code
+where true
+and v.entity_id = 'PY_CL'
+and latest.entity_id = 'PY_CL'
+and ve.is_latest
+and ve.is_active
+and latest.vendor_code is not null
+group by all
+)
+
+--#tabla transitions (todas)
+,transitions as (
+  select *
+  ,lag(row_state) over (partition by order_code order by state_created_at) previous_row_state  
+  from (
+  select order_code
+  ,timestamp_diff(state_created_at, previous_state_created_at,minute) minutes_diff
+  ,* except(order_code) 
+  ,lag(previous_state) over(partition by order_code order by previous_state_created_at) before_previous_state
+   from (
+    select created_date_local
+    ,safe_cast(l.platform_order_code as int64) order_code 
+    ,l.vendor.vertical_type
+   ,round(l.estimated_prep_time/60,0) estimated_preptime
+   ,d.rider_near_restaurant_at_local 
+   ,d.delivery_status
+   ,lag(datetime(t.created_at, "America/Santiago")) over (partition by platform_order_code order by t.created_at) previous_state_created_at
+    ,datetime(t.created_at, "America/Santiago") state_created_at
+    ,lag(t.state) over (partition by platform_order_code order by t.created_at) previous_state
+    ,t.state    
+    ,lead(t.state) over (partition by platform_order_code order by t.created_at) next_state
+    ,lead(t.actions.issue_type) over (partition by platform_order_code order by t.created_at) next_issue
+  ,t.rider_id
+  ,t.actions.performed_by 
+  ,row_number() over(partition by platform_order_code, t.state order by t.created_at asc) row_state --#nro de vez que sucede el estado
+  ,t.undispatch_type 
+  ,t.actions.issue_type  
+  ,t.actions.reason 
+  ,t.estimated_pickup_arrival_at_local estimated_pu_arrival 
+  ,t.estimated_dropoff_arrival_at_local estimated_do_arrival
+   from `peya-bi-tools-pro.il_logistics.fact_logistic_orders` l
+  left join unnest(l.deliveries) as d
+  left join unnest(d.transitions) as t
+  where l.country_code='cl'
+  and l.created_date_local between  dinf  and current_date()-1
+  and d.is_primary
+  and l.peya_order_id is not null 
+  order by order_code, t.created_at asc ) )
+ )
+
+--#cantidad de undispatches por orden 
+,und as ( 
+select order_code
+,case when delivery_status = "completed" and couriers_notified<total_manual_undispatch+1 then total_manual_undispatch+1
+when delivery_status ="cancelled" and couriers_notified<total_manual_undispatch then total_manual_undispatch 
+else couriers_notified end couriers_notified,
+total_manual_undispatch,
+reason_LatePreparation
+ from (
+select order_code
+,delivery_status
+,count(case when state="courier_notified" then rider_id end) couriers_notified
+,count(case when undispatch_type in ("temp_offline_undispatch","manual_undispatch") then rider_id end) total_manual_undispatch  
+,count(CASE WHEN undispatch_type='manual_undispatch' AND performed_by='issue_service' AND issue_type IN ('Issue::DispatchCourierRedispatchRequest') and reason IN ('Late Order Preparation') THEN rider_id end) as reason_LatePreparation
+from transitions 
+group by 1,2 
+  )
+)
+
+
+,calc as (
+SELECT 
+
+  order_id, 
+
+    SUM(TOTAL_ORDERS) AS TOTAL_ORDERS,
+    SUM(TOTAL_ORDERS) - (SUM(SEAMLESS)) AS NSE, 
+
+    -- VENDOR PERFORMANCE 
+    SUM(PARTNER_PERFORMANCE) AS PARTNER_PERFORMANCE,
+
+        SUM(TR_FORCED_PREORDER) AS TR_FORCED_PREORDER,
+        SUM(E_MODIFIED_ORDER) AS E_MODIFIED_ORDER,
+        
+        SUM(IF(undispatch_reason = 'Late Order Preparation', 
+                TR_STAFFING_AND_PARTNER_PERFO / 2 + 
+                TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3 + 
+                TR_RIDER_AND_PARTNER_PERFO / 2 + 
+                TR_PARTNER_PERFO, 0)) AS LATE_ORDER_PREPARATION_UNDISPATCH,
+
+        SUM(FR_PARTNER_PERFORMANCE) AS FR_PARTNER_PERFORMANCE,
+            SUM(IF(reject_reason = 'ITEM_UNAVAILABLE', FR_PARTNER_PERFORMANCE, 0)) AS ITEM_UNAVAILABLE,
+            SUM(IF(reject_reason = 'CLOSED', FR_PARTNER_PERFORMANCE, 0)) AS CLOSED,
+            SUM(IF(reject_reason = 'UNREACHABLE', FR_PARTNER_PERFORMANCE, 0)) AS UNREACHABLE,
+            SUM(IF(reject_reason = 'NO_RESPONSE', FR_PARTNER_PERFORMANCE, 0)) AS NO_RESPONSE,
+            SUM(IF(reject_reason = 'TOO_BUSY', FR_PARTNER_PERFORMANCE, 0)) AS TOO_BUSY,
+
+            SUM(IF(reject_reason = 'CONTENT_WRONG_MISLEADING', FR_PARTNER_PERFORMANCE, 0)) AS CONTENT_WRONG_MISLEADING,
+            SUM(IF(reject_reason = 'FOOD_QUALITY_SPILLAGE', FR_PARTNER_PERFORMANCE, 0)) AS FOOD_QUALITY_SPILLAGE,
+            SUM(IF(reject_reason = 'MENU_ACCOUNT_SETTINGS', FR_PARTNER_PERFORMANCE, 0)) AS MENU_ACCOUNT_SETTINGS,
+            SUM(IF(reject_reason = 'WILL_NOT_WORK_WITH_PLATFORM', FR_PARTNER_PERFORMANCE, 0)) AS WILL_NOT_WORK_WITH_PLATFORM,
+            SUM(IF(reject_reason = 'WRONG_ORDER_ITEMS_DELIVERED', FR_PARTNER_PERFORMANCE, 0)) AS WRONG_ORDER_ITEMS_DELIVERED,
+
+        SUM(SR_PARTNER_PERFORMANCE) AS SR_PARTNER_PERFORMANCE,
+
+            SUM(IF(inaccuracy_reason = 'missing item', SR_PARTNER_PERFORMANCE, 0)) AS INACC_MISSING_ITEM,
+            SUM(IF(inaccuracy_reason = 'wrong item', SR_PARTNER_PERFORMANCE, 0)) AS INACC_WRONG_ITEM,
+            SUM(IF(inaccuracy_reason = 'food quality', SR_PARTNER_PERFORMANCE, 0)) AS INACC_FOOD_QUALITY,
+            SUM(IF(inaccuracy_reason = 'wrong order', SR_PARTNER_PERFORMANCE, 0)) AS INACC_WRONG_ORDER,
+
+            SUM(IF(IFNULL(undispatch_reason, '') != 'Late Order Preparation', 
+                    TR_STAFFING_AND_PARTNER_PERFO / 2 + 
+                    TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3 + 
+                    TR_RIDER_AND_PARTNER_PERFO / 2 + 
+                    TR_PARTNER_PERFO, 0)) AS AWT_10_IMPACT,
+                    
+        SUM(IF(TR_COMBINATION > 0, PARTNER_PERFORMANCE, 0)) AS AWT_10_COMBINED_IMPACT,
+        SUM(TR_HIGH_PREP_TIME + TR_HIGH_PREP_TIME_AND_DISTANCE / 2 + TR_HIGH_PREP_TIME_AND_DISTANCE_COMBINATION / 2) AS HIGH_PREP_TIME,
+            SUM(IF(min_over_pt_threshold BETWEEN 0 AND 10, TR_HIGH_PREP_TIME + TR_HIGH_PREP_TIME_AND_DISTANCE / 2 + TR_HIGH_PREP_TIME_AND_DISTANCE_COMBINATION / 2, 0)) AS HIGH_PREP_TIME_0_10,
+            SUM(IF(min_over_pt_threshold BETWEEN 11 AND 20, TR_HIGH_PREP_TIME + TR_HIGH_PREP_TIME_AND_DISTANCE / 2 + TR_HIGH_PREP_TIME_AND_DISTANCE_COMBINATION / 2, 0)) AS HIGH_PREP_TIME_11_20,
+            SUM(IF(min_over_pt_threshold BETWEEN 21 AND 30, TR_HIGH_PREP_TIME + TR_HIGH_PREP_TIME_AND_DISTANCE / 2 + TR_HIGH_PREP_TIME_AND_DISTANCE_COMBINATION / 2, 0)) AS HIGH_PREP_TIME_21_30,
+            SUM(IF(min_over_pt_threshold >= 31, TR_HIGH_PREP_TIME + TR_HIGH_PREP_TIME_AND_DISTANCE / 2 + TR_HIGH_PREP_TIME_AND_DISTANCE_COMBINATION / 2, 0)) AS HIGH_PREP_TIME_OVER_31,
+
+    -- STAFFING
+    SUM(STAFFING) AS STAFFING,
+        SUM(FR_STAFFING) AS FR_STAFFING,
+            SUM(IF(reject_reason = 'NO_COURIER', FR_STAFFING, 0)) AS NO_COURIER_ICE,
+            SUM(IF(reject_reason = 'LATE_DELIVERY', FR_STAFFING, 0)) AS LATE_DELIVERY_ICE,
+
+        SUM(TR_STAFFING + TR_STAFFING_AND_RIDER_PERFO / 2 + TR_STAFFING_AND_PARTNER_PERFO / 2 + TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3) AS STAFFING_AFFECTION_IMPACT,
+        SUM(IF(TR_COMBINATION > 0, STAFFING, 0)) AS STAFFING_AFFECTION_COMBINED_IMPACT,
+
+
+    -- RIDER PERFORMANCE 
+    SUM(RIDER_PERFORMANCE) AS RIDER_PERFORMANCE,
+        SUM(FR_RIDER_PERFORMANCE) AS FR_RIDER_PERFORMANCE,
+            SUM(IF(reject_reason = 'COURIER_ACCIDENT', FR_RIDER_PERFORMANCE, 0)) AS COURIER_ACCIDENT,
+            SUM(IF(reject_reason = 'COURIER_UNREACHABLE', FR_RIDER_PERFORMANCE, 0)) AS COURIER_UNREACHABLE,
+            SUM(IF(reject_reason = 'NEVER_DELIVERED', FR_RIDER_PERFORMANCE, 0)) AS NEVER_DELIVERED,
+            SUM(IF(reject_reason = 'UNABLE_TO_FIND', FR_RIDER_PERFORMANCE, 0)) AS UNABLE_TO_FIND,
+            SUM(IF(reject_reason = 'UNPROFESSIONAL_BEHAVIOUR', FR_RIDER_PERFORMANCE, 0)) AS UNPROFESSIONAL_BEHAVIOUR,
+
+        SUM(SR_RIDER_PERFORMANCE) AS SR_RIDER_PERFORMANCE,
+        SUM(IF(contact_reason_l2 = 'Rider issue', SR_RIDER_PERFORMANCE, 0)) AS RIDER_ISSUE,
+        
+        SUM(TR_STAFFING_AND_RIDER_PERFO / 2 + TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3 + TR_RIDER_PERFO + TR_RIDER_AND_PARTNER_PERFO / 2) AS UNDISPATCH_IMPACT,
+
+            SUM(IF(undispatch_reason IN ('Issue::DispatchCourierDecline', 
+                                        'Issue::DispatchDeliveryNotSeen', 
+                                        'Issue::DispatchDeliveryIgnored'), TR_STAFFING_AND_RIDER_PERFO / 2 + TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3 + TR_RIDER_PERFO + TR_RIDER_AND_PARTNER_PERFO / 2, 0)) AS PRE_ACCEPTED,
+
+            SUM(IF(undispatch_reason IN ('Issue::PickupIdleOrder', 
+                                        'Issue::PickupNoGpsAndDelayed', 
+                                        'Issue::PickupNoCourierInteraction', 
+                                        'Issue::PickupWaiting', 
+                                        'Issue::DropoffBigOrderLate'), TR_STAFFING_AND_RIDER_PERFO / 2 + TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3 + TR_RIDER_PERFO + TR_RIDER_AND_PARTNER_PERFO / 2, 0)) AS POST_ACCEPTED,
+
+            SUM(IF(undispatch_reason IN ('Issue::DispatchCourierRedispatchRequest', 
+                                        'Accident', 
+                                        'Equipment Issue', 
+                                        'Order issue',
+                                        'Order Issue'), TR_STAFFING_AND_RIDER_PERFO / 2 + TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3 + TR_RIDER_PERFO + TR_RIDER_AND_PARTNER_PERFO / 2, 0)) AS HELP_CENTER,
+
+            SUM(IF(undispatch_reason IN ('Rider - Not accepting', 
+                                        'Rider - Not moving towards Pickup/Dropoff and Not Reachable', 
+                                        "System - Delivery not in rider's zone/area", 
+                                        'Vendor - Late preparation, additional 15 min needed', 
+                                        'Rider - Vehicle/Equipment/Phone issue', 
+                                        'Order - Special vehicle/equipment needed', 
+                                        'Rider - Accident', 'System - Distance to pickup/dropoff too far - not willing to proceed', 
+                                        'Rider - Break request', 'Rider - Switched orders', 
+                                        'Rider - Health Issue', 
+                                        'Rider - Order ends after shift, not willing to extend', 
+                                        'Rider - Previous order clicked through'), TR_STAFFING_AND_RIDER_PERFO / 2 + TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3 + TR_RIDER_PERFO + TR_RIDER_AND_PARTNER_PERFO / 2, 0)) AS AGENT,
+
+            SUM(IF(undispatch_reason = 'temp_offline_undispatch', TR_STAFFING_AND_RIDER_PERFO / 2 + TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3 + TR_RIDER_PERFO + TR_RIDER_AND_PARTNER_PERFO / 2, 0)) AS TEMP_OFFLINE_UNDISPATCH,
+
+            SUM(IF(undispatch_reason = 'dispatched_to_ending_courier', TR_STAFFING_AND_RIDER_PERFO / 2 + TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3 + TR_RIDER_PERFO + TR_RIDER_AND_PARTNER_PERFO / 2, 0)) AS DISPATCHED_TO_ENDING_COURIER,
+
+            SUM(IF((undispatch_reason IN('delivery_cancelled',
+                                        'manual_undispatch',
+                                        'manual_dispatch') OR undispatch_reason IS NULL), TR_STAFFING_AND_RIDER_PERFO / 2 + TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3 + TR_RIDER_PERFO + TR_RIDER_AND_PARTNER_PERFO / 2, 0)) AS OTHER_UNDISPATCHS,
+
+            SUM(IF(undispatch_reason IN('Big order/split order', 
+                                        'Customer never receive the order', 
+                                        'Customer received the wrong order', 
+                                        'Return delivery to Hub', 
+                                        'Whole order spillage', 
+                                        'Bad food quality for the entire order', 
+                                        'Rider accident'), TR_STAFFING_AND_RIDER_PERFO / 2 + TR_STAFFING_RIDER_AND_PARTNER_PERFO / 3 + TR_RIDER_PERFO + TR_RIDER_AND_PARTNER_PERFO / 2, 0)) AS SPLIT_ORDER,
+
+        SUM(IF(TR_COMBINATION > 0, RIDER_PERFORMANCE, 0)) AS UNDISPATCH_COMBINED_IMPACT,
+
+
+    -- PREDICTION MODEL
+    SUM(PREDICTION_MODEL) AS MODEL_ACC,
+
+    -- ANXIOUS USER
+    SUM(ANXIOUS_USER) AS ANXIOUS_USER,
+        SUM(FR_ANXIOUS_USER) AS FR_ANXIOUS_USER,
+            SUM(IF(reject_reason = 'BAD_WEATHER', FR_ANXIOUS_USER, 0)) AS BAD_WEATHER,
+            SUM(IF(reject_reason = 'DELAY_CUSTOMER_LEFT', FR_ANXIOUS_USER, 0)) AS DELAY_CUSTOMER_LEFT,
+            
+            SUM(IF(reject_reason = 'DELIVERY_ETA_TOO_LONG', FR_ANXIOUS_USER, 0)) AS DELIVERY_ETA_TOO_LONG,
+              SUM(IF(eta_too_long_causals = '01. REJECTED < 10', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_1,
+              SUM(IF(eta_too_long_causals = '02. REJECTED >= 10', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_2,
+              SUM(IF(eta_too_long_causals = '03. SIN COURIER NOTIFIED', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_3,
+              SUM(IF(eta_too_long_causals = '04. CON COURIER NOTIFIED & SIN ACCEPTANCE', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_4,
+              SUM(IF(eta_too_long_causals = '05. CON COURIER NOTIFIED & CON ACCEPTANCE', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_5,
+              SUM(IF(eta_too_long_causals = '06. 1 LATE PREP & CASH ORDER', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_6,
+              SUM(IF(eta_too_long_causals = '07. 1 LATE PREP & ONLINE ORDER', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_7,
+              SUM(IF(eta_too_long_causals = '08. 1 MANUAL UNDISPATCH', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_8,
+              SUM(IF(eta_too_long_causals = '09. FIRST NEAR PU < CPU+10 & REJECTED < CPU+10', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_9,
+              SUM(IF(eta_too_long_causals = '10. FIRST NEAR PU < CPU+10 & REJECTED > CPU+10', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_10,
+              SUM(IF(eta_too_long_causals = '11. FIRST NEAR PU > CPU+10', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_11,
+              SUM(IF(eta_too_long_causals = '12. LAST NEAR PU < CPU+10 & (DIFF. PU - REJECTED) > EDT', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_12,
+              SUM(IF(eta_too_long_causals = '13. LAST NEAR PU > CPU+10 & (DIFF. PU - REJECTED) > EDT', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_13,
+              SUM(IF(eta_too_long_causals = '14. CON NEAR CUSTOMER: NO ES ETL', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_14,
+              SUM(IF(eta_too_long_causals = '15. OTROS', FR_ANXIOUS_USER, 0)) AS ETA_TOO_LONG_15,
+
+            SUM(IF(reject_reason = 'LATE_DELIVERY', FR_ANXIOUS_USER, 0)) AS LATE_DELIVERY,
+            SUM(IF(reject_reason = 'NO_COURIER', FR_ANXIOUS_USER, 0)) AS NO_COURIER,
+            SUM(IF(reject_reason = 'NO_PICKER', FR_ANXIOUS_USER, 0)) AS NO_PICKER,
+
+        SUM(SR_ANXIOUS_USER) AS SR_ANXIOUS_USER,
+            SUM(IF(contact_reason_l2 = 'Delivery time', SR_ANXIOUS_USER, 0)) AS DELIVERY_TIME,
+            SUM(IF(contact_reason_l2 = 'Order status', SR_ANXIOUS_USER, 0)) AS ORDER_STATUS,
+              SUM(IF(actual_delivery_time > max_pdt AND contact_reason_l2 = 'Order status', SR_ANXIOUS_USER, 0)) AS ORDER_STATUS_OVER_PDT,
+              SUM(IF(actual_delivery_time <= max_pdt AND contact_reason_l2 = 'Order status', SR_ANXIOUS_USER, 0)) AS ORDER_STATUS_UNDER_PDT,
+
+
+
+    -- OTHER SESSIONS
+    SUM(OTHER_SESSIONS) AS OTHER_SESSIONS,
+        SUM(SR_OTHER_ORDER_RELATED) AS SR_OTHER_ORDER_RELATED,
+            SUM(IF(contact_reason_l2 = 'Change order details', SR_OTHER_ORDER_RELATED, 0)) AS CHANGE_ORDER_DETAILS,
+            SUM(IF(contact_reason_l2 = 'Cancellation', SR_OTHER_ORDER_RELATED, 0)) AS CANCELLATION,
+            SUM(IF(contact_reason_l2 = 'Voucher issue', SR_OTHER_ORDER_RELATED, 0)) AS VOUCHER_ISSUE,
+            SUM(IF(contact_reason_l2 = 'Other live order inquiry', SR_OTHER_ORDER_RELATED, 0)) AS OTHER_LIVE_ORDER_INQUIRY,
+            SUM(IF(contact_reason_l2 = 'Payment issue', SR_OTHER_ORDER_RELATED, 0)) AS PAYMENT_ISSUE,
+
+        SUM(SR_OTHER_NON_ORDER_RELATED) AS SR_OTHER_NON_ORDER_RELATED,
+            SUM(IF(contact_reason_l2 = 'Customer Account', SR_OTHER_NON_ORDER_RELATED, 0)) AS CUSTOMER_ACCOUNT,
+            SUM(IF(contact_reason_l2 = 'Information Request', SR_OTHER_NON_ORDER_RELATED, 0)) AS INFORMATION_REQUEST,
+            SUM(IF(contact_reason_l2 = 'Internal', SR_OTHER_NON_ORDER_RELATED, 0)) AS INTERNAL,
+            SUM(IF(contact_reason_l2 = 'Payment & Refunds', SR_OTHER_NON_ORDER_RELATED, 0)) AS PAYMENT_AND_REFUNDS,
+            SUM(IF(contact_reason_l2 = 'Inactive Session', SR_OTHER_NON_ORDER_RELATED, 0)) AS INACTIVE_SESSION,
+            SUM(IF(contact_reason_l2 = 'No Leaf Reached Session', SR_OTHER_NON_ORDER_RELATED, 0)) AS NO_LEAF_REACHED_SESSION,
+            SUM(IF(contact_reason_l2 = 'No Data', SR_OTHER_NON_ORDER_RELATED, 0)) AS NO_DATA_SESSION,
+
+        SUM(SR_PARTNER_PERFORMANCE_WITHOUT_INACCURACY) AS SR_PARTNER_PERFORMANCE_WITHOUT_INACCURACY,
+
+            SUM(IF(contact_reason_l2 = 'Food Issue', SR_PARTNER_PERFORMANCE_WITHOUT_INACCURACY, 0)) AS FOOD_ISSUE,
+            SUM(IF(contact_reason_l2 = 'Menu issue', SR_PARTNER_PERFORMANCE_WITHOUT_INACCURACY, 0)) AS MENU_ISSUE,
+            SUM(IF(contact_reason_l2 = 'Wrong / Missing item', SR_PARTNER_PERFORMANCE_WITHOUT_INACCURACY, 0)) AS WRONG_OR_MISSING_ITEM,
+            SUM(IF(contact_reason_l2 = 'Wrong order / Never arrived', SR_PARTNER_PERFORMANCE_WITHOUT_INACCURACY, 0)) AS WRONG_ORDER_OR_NEVER_ARRIVED,
+            SUM(IF(contact_reason_l2 = 'Item Issue', SR_PARTNER_PERFORMANCE_WITHOUT_INACCURACY, 0)) AS ITEM_ISSUE,
+
+    -- OTHER CANCELLATIONS
+    SUM(OTHER_CANCELLATIONS) AS OTHER_CANCELLATIONS,
+        SUM(FR_OTHER_ORDER_RELATED) AS FR_OTHER_ORDER_RELATED,
+            SUM(IF(reject_reason = 'ADDRESS_INCOMPLETE_MISSTATED', FR_OTHER_ORDER_RELATED, 0)) AS ADDRESS_INCOMPLETE_MISSTATED,
+            SUM(IF(reject_reason = 'BAD_LOCATION', FR_OTHER_ORDER_RELATED, 0)) AS BAD_LOCATION,
+            SUM(IF(reject_reason = 'BILLING_PROBLEM', FR_OTHER_ORDER_RELATED, 0)) AS BILLING_PROBLEM,
+            SUM(IF(reject_reason = 'CARD_READER_NOT_AVAILABLE', FR_OTHER_ORDER_RELATED, 0)) AS CARD_READER_NOT_AVAILABLE,
+            SUM(IF(reject_reason = 'DUPLICATE_ORDER', FR_OTHER_ORDER_RELATED, 0)) AS DUPLICATE_ORDER,
+            SUM(IF(reject_reason = 'EXTRA_CHARGE_NEEDED', FR_OTHER_ORDER_RELATED, 0)) AS EXTRA_CHARGE_NEEDED,
+            SUM(IF(reject_reason = 'MISTAKE_ERROR', FR_OTHER_ORDER_RELATED, 0)) AS MISTAKE_ERROR,
+            SUM(IF(reject_reason = 'MOV_NOT_REACHED', FR_OTHER_ORDER_RELATED, 0)) AS MOV_NOT_REACHED,
+            SUM(IF(reject_reason = 'NO_SHOW', FR_OTHER_ORDER_RELATED, 0)) AS NO_SHOW,
+            SUM(IF(reject_reason = 'ORDER_MODIFICATION_NOT_POSSIBLE', FR_OTHER_ORDER_RELATED, 0)) AS ORDER_MODIFICATION_NOT_POSSIBLE,
+            SUM(IF(reject_reason = 'OUTSIDE_DELIVERY_AREA', FR_OTHER_ORDER_RELATED, 0)) AS OUTSIDE_DELIVERY_AREA,
+            SUM(IF(reject_reason = 'OUTSIDE_SERVICE_HOURS', FR_OTHER_ORDER_RELATED, 0)) AS OUTSIDE_SERVICE_HOURS,
+            SUM(IF(reject_reason = 'REASON_UNKNOWN', FR_OTHER_ORDER_RELATED, 0)) AS REASON_UNKNOWN,
+            SUM(IF(reject_reason = 'TECHNICAL_PROBLEM', FR_OTHER_ORDER_RELATED, 0)) AS TECHNICAL_PROBLEM,
+            SUM(IF(reject_reason = 'TEST_ORDER', FR_OTHER_ORDER_RELATED, 0)) AS TEST_ORDER,
+            SUM(IF(reject_reason = 'UNABLE_TO_PAY', FR_OTHER_ORDER_RELATED, 0)) AS UNABLE_TO_PAY,
+            SUM(IF(reject_reason = 'VOUCHER_NOT_APPLIED', FR_OTHER_ORDER_RELATED, 0)) AS VOUCHER_NOT_APPLIED,
+            SUM(IF(reject_reason = 'LATE_DELIVERY', FR_OTHER_ORDER_RELATED, 0)) AS NIU_LATE_DELIVERY,
+            SUM(IF(reject_reason = 'DELAY_CUSTOMER_LEFT', FR_OTHER_ORDER_RELATED, 0)) AS NIU_DELAY_CUSTOMER_LEFT,
+
+            SUM(IF(reject_reason = 'DELIVERY_ETA_TOO_LONG', FR_OTHER_ORDER_RELATED, 0)) AS NIU_DELIVERY_ETA_TOO_LONG,
+              SUM(IF(eta_too_long_causals = '01. REJECTED < 10', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_1,
+              SUM(IF(eta_too_long_causals = '02. REJECTED >= 10', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_2,
+              SUM(IF(eta_too_long_causals = '03. SIN COURIER NOTIFIED', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_3,
+              SUM(IF(eta_too_long_causals = '04. CON COURIER NOTIFIED & SIN ACCEPTANCE', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_4,
+              SUM(IF(eta_too_long_causals = '05. CON COURIER NOTIFIED & CON ACCEPTANCE', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_5,
+              SUM(IF(eta_too_long_causals = '06. 1 LATE PREP & CASH ORDER', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_6,
+              SUM(IF(eta_too_long_causals = '07. 1 LATE PREP & ONLINE ORDER', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_7,
+              SUM(IF(eta_too_long_causals = '08. 1 MANUAL UNDISPATCH', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_8,
+              SUM(IF(eta_too_long_causals = '09. FIRST NEAR PU < CPU+10 & REJECTED < CPU+10', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_9,
+              SUM(IF(eta_too_long_causals = '10. FIRST NEAR PU < CPU+10 & REJECTED > CPU+10', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_10,
+              SUM(IF(eta_too_long_causals = '11. FIRST NEAR PU > CPU+10', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_11,
+              SUM(IF(eta_too_long_causals = '12. LAST NEAR PU < CPU+10 & (DIFF. PU - REJECTED) > EDT', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_12,
+              SUM(IF(eta_too_long_causals = '13. LAST NEAR PU > CPU+10 & (DIFF. PU - REJECTED) > EDT', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_13,
+              SUM(IF(eta_too_long_causals = '14. CON NEAR CUSTOMER: NO ES ETL', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_14,
+              SUM(IF(eta_too_long_causals = '15. OTROS', FR_OTHER_ORDER_RELATED, 0)) AS NIU_ETA_TOO_LONG_15,
+
+        SUM(FR_OTHER_NON_ORDER_RELATED) AS FR_OTHER_NON_ORDER_RELATED,
+            SUM(IF(reject_reason = 'BLACKLISTED', FR_OTHER_NON_ORDER_RELATED, 0)) AS BLACKLISTED,
+            SUM(IF(reject_reason = 'FRAUD_PRANK', FR_OTHER_NON_ORDER_RELATED, 0)) AS FRAUD_PRANK,
+            SUM(IF(reject_reason = 'NO_PICKER', FR_OTHER_NON_ORDER_RELATED, 0)) AS NIU_NO_PICKER,
+            SUM(IF(reject_reason = 'BAD_WEATHER', FR_OTHER_NON_ORDER_RELATED, 0)) AS NIU_BAD_WEATHER,
+            SUM(IF(reject_reason = 'NO_COURIER', FR_OTHER_NON_ORDER_RELATED, 0)) AS NIU_NO_COURIER,
+
+    -- DISTANCES
+    SUM(DISTANCES) AS DISTANCES, 
+        SUM(TR_HIGH_DISTANCE + TR_HIGH_PREP_TIME_AND_DISTANCE / 2 + TR_HIGH_PREP_TIME_AND_DISTANCE_COMBINATION / 2) AS DRIVING_TIME_IMPACT,
+    
+from `peya-delivery-and-support.automated_tables_reports.non_seamless_reasons`  s
+where country_name ="Chile"
+and created_date_local >=dinf 
+group by 1 
+)
+
+,tab as (
+select l.peya_order_id, extract(hour from l.created_at_local) hour 
+,date_trunc(created_date_local, month) month_date 
+,created_date_local
+,hdm.hd_order 
+,hdm.author 
+,hdm.minutes_added 
+,l.vendor.vertical_type 
+,l.vendor.vendor_code
+,l.vendor.name vendor_name 
+,p.franchise.franchise_name 
+,p.main_cousine_category_name main_cuisine 
+,l.city.city_name 
+,datetime_diff(l.food_is_ready_at, l.created_at, second)/60 fir_minutes
+,l.timings.avoidable_wait_time/60 awt
+,l.estimated_prep_time/60 ept  
+,o.order_status 
+,n.platform_order_code
+,n.is_slow_order 
+,p.ordersreceptionsystem.name reception_system
+,vbo.client_name 
+,vbo.latest_vendor_grade 
+,und.couriers_notified 
+,und.total_manual_undispatch 
+,und.reason_latepreparation 
+,l.timings.actual_delivery_time/60 actual_dt 
+,l.is_preorder 
+,l.order_status delivery_status  
+,datetime_diff(d.rider_picked_up_at_local, l.sent_to_vendor_at_local, second)/60 order_to_pickup 
+,calc.partner_performance
+,calc.high_prep_time
+,calc.awt_10_impact
+,calc.late_order_preparation_undispatch
+ from `peya-bi-tools-pro.il_logistics.fact_logistic_orders` l  
+ left join hdm on hdm.order_code = l.peya_order_id
+ left join `peya-bi-tools-pro.il_core.dim_partner` p on l.vendor.vendor_code = safe_cast(p.partner_id as string)
+ left join (
+  select nse.platform_order_code, nse.non_seamless_order, nse.is_slow_order 
+  from `peya-datamarts-pro.dm_fulfillment.non_seamless_delivery_order_level` nse
+  where nse.country_name ="Chile"
+  and nse.created_date_local >= dinf 
+ ) n on l.peya_order_id = n.platform_order_code 
+ left join (
+  select o.order_id, o.order_status, 
+  from `peya-bi-tools-pro.il_core.fact_orders` o 
+  where o.country_id = 2
+  and o.registered_date >= dinf
+ ) o on l.peya_order_id = o.order_id 
+ left join vbo on safe_cast(vbo.vendor_code as string)= l.vendor.vendor_code
+ left join und on l.peya_order_id = und.order_code 
+ left join unnest(l.deliveries) d 
+ left join calc on l.peya_order_id = calc.order_id 
+ where l.country_code = "cl"
+ and l.created_date_local >= dinf 
+ and l.peya_order_id is not null
+ and d.is_primary  
+)
+
+select 
+created_date_local
+,date_trunc(created_date_local, month) month 
+,date_trunc(created_date_local, week(monday)) week 
+, lower(format_date("%A", created_date_local)) dayofweek
+, hour
+, vendor_code
+, vendor_name
+, franchise_name
+, vertical_type 
+, city_name 
+, reception_system
+, client_name 
+, latest_vendor_grade 
+, minutes_added 
+, main_cuisine 
+, case when awt=0 then 0 
+when awt >= 20 then 21 
+else ceil(awt) end awt_rounded
+,count(distinct peya_order_id) total_orders
+,count(distinct case when awt is not null then peya_order_id end) base_awt
+,sum(awt) sum_awt
+,sum(ept) sum_ept
+,count(distinct case when fir_minutes is not null then peya_order_id end) base_fir
+,sum(fir_minutes) sum_fir
+,sum(minutes_added) sum_hdm_minutes
+,count(distinct case when minutes_added is not null then peya_order_id end) base_hdm
+,sum(case when author ="log_vendor_monitor" then minutes_added end) sum_hdm_triggers
+,count(distinct case when author ="log_vendor_monitor" then peya_order_id end) base_hdm_triggers
+,count(distinct case when order_status="CONFIRMED" then peya_order_id end) confirmed 
+,sum(is_slow_order) sum_slow 
+,count(distinct platform_order_code) base_seamless 
+,sum( couriers_notified) couriers_notified
+,sum(total_manual_undispatch ) total_manual_undispatch
+,sum( reason_latepreparation) reason_latepreparation
+,sum(case when is_preorder =FALSE and delivery_status="completed" then actual_dt end) sum_dt
+,count( distinct case when is_preorder =FALSE and delivery_status="completed" then peya_order_id end) base_dt
+, sum(order_to_pickup) sum_order_to_pu 
+, count(distinct case when order_to_pickup is not null then peya_order_id end) base_order_to_pu 
+,sum(partner_performance) partner_perfo
+,sum(high_prep_time) high_preptime
+,sum(awt_10_impact) awt_10_impact
+,sum(late_order_preparation_undispatch) late_prep_impact
+ from tab 
+ where created_date_local >= dinf
+group by all

@@ -1,0 +1,528 @@
+WITH time_series AS (
+  SELECT
+    DATETIME(timestamp_val) AS datetime_ref
+  FROM UNNEST(
+    GENERATE_TIMESTAMP_ARRAY(
+      TIMESTAMP("2026-07-06 00:00:00"),
+      TIMESTAMP("2026-07-19 23:59:00"),
+      INTERVAL 1 MINUTE
+    )
+  ) AS timestamp_val
+),
+
+vendor_grades AS (
+  SELECT
+    SAFE_CAST(v.vendor_code AS INT64) AS vendor_code,
+    ve.vendor_monitor.vendor_grade AS grade
+
+  FROM `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendors` v
+  LEFT JOIN UNNEST(vendor) ve
+  LEFT JOIN `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_attributes_latest` latest
+    ON latest.vendor_code = v.vendor_code
+
+  WHERE TRUE
+    AND v.entity_id = 'PY_CL'
+    AND latest.entity_id = 'PY_CL'
+    AND ve.is_latest
+    AND ve.is_active
+    AND latest.vendor_code IS NOT NULL
+
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY SAFE_CAST(v.vendor_code AS INT64)
+    ORDER BY DATE(ve.vendor_monitor.last_updated_at) DESC
+  ) = 1
+),
+
+hdm AS (
+  SELECT
+    SAFE_CAST(order_code AS INT64) AS order_code,
+
+    LOGICAL_OR(
+      COALESCE(high_demand_mode.is_hd_order, FALSE)
+    ) AS is_hd_order,
+
+    MAX(
+      CASE
+        WHEN high_demand_mode.is_hd_order
+        THEN COALESCE(
+          SAFE_CAST(high_demand_mode.minutes_added AS FLOAT64),
+          0
+        )
+        ELSE 0
+      END
+    ) AS hdm_minutes_added
+
+  FROM `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_orders`
+
+  WHERE TRUE
+    AND country_code = 'cl'
+    AND created_date BETWEEN '2026-07-06' AND '2026-07-19'
+    AND requested_pickup_at IS NULL
+
+  GROUP BY
+    SAFE_CAST(order_code AS INT64)
+),
+
+order_casuistics AS (
+  SELECT
+    CAST(n.order_id AS STRING) AS order_id,
+    SAFE_CAST(n.partner_id AS INT64) AS vendor_code,
+
+    SUM(
+      IF(
+        IFNULL(n.undispatch_reason, '') != 'Late Order Preparation',
+
+          COALESCE(n.TR_STAFFING_AND_PARTNER_PERFO, 0) / 2
+        + COALESCE(n.TR_STAFFING_RIDER_AND_PARTNER_PERFO, 0) / 3
+        + COALESCE(n.TR_RIDER_AND_PARTNER_PERFO, 0) / 2
+        + COALESCE(n.TR_PARTNER_PERFO, 0),
+
+        0
+      )
+    ) AS awt10
+
+  FROM `peya-delivery-and-support.automated_tables_reports.non_seamless_reasons` n
+
+  WHERE n.country_name = 'Chile'
+    AND DATE(n.created_date_local) BETWEEN '2026-07-06' AND '2026-07-19'
+
+  GROUP BY
+    order_id,
+    vendor_code
+),
+
+base AS (
+  SELECT
+    l.peya_order_id,
+    SAFE_CAST(l.vendor.vendor_code AS INT64) AS vendor_code,
+
+    p.partner_name AS store_name,
+    p.franchise.franchise_name AS franchise_name,
+
+    CASE
+      WHEN LOWER(p.partner_name) LIKE '%ostre%' THEN 'Postres'
+      WHEN LOWER(p.partner_name) LIKE '%hicken%' THEN 'Chicken'
+      ELSE 'Normal'
+    END AS vertical_type,
+
+    COALESCE(vg.grade, 'NO_GRADE') AS grade,
+
+    l.created_at_local,
+    l.vendor_accepted_at_local AS vendor_accepted,
+    l.sent_to_vendor_at_local AS stv_local,
+
+    d.delivery_id,
+    d.rider_picked_up_at_local AS rider_pu,
+
+    DATETIME(t.created_at) AS transition_at,
+    t.state,
+    t.rider_id AS transition_rider,
+
+    LEAD(DATETIME(t.created_at)) OVER (
+      PARTITION BY
+        l.peya_order_id,
+        d.delivery_id
+      ORDER BY
+        t.created_at
+    ) AS next_transition_at,
+
+    COALESCE(o.non_seamless_order, FALSE) AS non_seamless,
+
+    COALESCE(
+      SAFE_CAST(o.is_slow_order AS BOOL),
+      FALSE
+    ) AS is_slow_order,
+
+    SAFE_DIVIDE(
+      SAFE_CAST(l.estimated_prep_time AS FLOAT64),
+      60
+    ) AS ept_min,
+
+    SAFE_DIVIDE(
+      SAFE_CAST(l.timings.avoidable_wait_time AS FLOAT64),
+      60
+    ) AS awt_min,
+
+    COALESCE(h.is_hd_order, FALSE) AS is_hd_order,
+    COALESCE(h.hdm_minutes_added, 0) AS hdm_minutes_added,
+
+    COALESCE(c.awt10, 0) AS awt10
+
+  FROM `peya-bi-tools-pro.il_logistics.fact_logistic_orders` l
+  LEFT JOIN UNNEST(l.deliveries) d
+  LEFT JOIN UNNEST(d.transitions) t
+
+  LEFT JOIN order_casuistics c
+  ON c.order_id = CAST(l.peya_order_id AS STRING)
+  AND c.vendor_code = SAFE_CAST(l.vendor.vendor_code AS INT64)
+
+  LEFT JOIN `peya-bi-tools-pro.il_core.dim_partner` p
+    ON SAFE_CAST(l.vendor.vendor_code AS INT64)
+      = SAFE_CAST(p.partner_id AS INT64)
+
+  LEFT JOIN vendor_grades vg
+    ON SAFE_CAST(l.vendor.vendor_code AS INT64)
+      = vg.vendor_code
+
+  LEFT JOIN `peya-datamarts-pro.dm_fulfillment.non_seamless_delivery_order_level` o
+    ON o.platform_order_code = l.peya_order_id
+
+  LEFT JOIN hdm h
+    ON h.order_code = SAFE_CAST(l.peya_order_id AS INT64)
+
+  WHERE TRUE
+    AND l.country_code = 'cl'
+    AND l.created_date_local BETWEEN '2026-07-06' AND '2026-07-19'
+    AND l.peya_order_id IS NOT NULL
+    AND l.vendor.vertical_type = 'restaurants'
+    -- AND p.franchise.franchise_name LIKE '%onald%'
+
+    AND (
+      LOWER(p.franchise.franchise_name) LIKE "%papa%" OR 
+      LOWER(p.franchise.franchise_name) LIKE "%melt%" OR 
+      LOWER(p.franchise.franchise_name) LIKE "%under%"
+    )
+
+    -- AND d.is_returning = FALSE
+    -- AND vg.grade IS NOT NULL
+),
+
+qord AS (
+  SELECT DISTINCT
+    peya_order_id,
+    vendor_code,
+    store_name,
+    franchise_name,
+    vertical_type,
+    grade,
+    vendor_accepted,
+    rider_pu
+
+  FROM base
+
+  WHERE TRUE
+    AND stv_local IS NOT NULL
+    AND vendor_accepted IS NOT NULL
+    AND rider_pu IS NOT NULL
+),
+
+rnpu AS (
+  SELECT
+    vendor_code,
+    transition_at,
+    next_transition_at,
+    transition_rider
+
+  FROM base
+
+  WHERE TRUE
+    AND state = 'near_pickup'
+    AND transition_at IS NOT NULL
+    AND next_transition_at IS NOT NULL
+),
+
+orders_created AS (
+  SELECT DISTINCT
+    peya_order_id,
+    vendor_code,
+    created_at_local,
+    non_seamless,
+    is_slow_order,
+    ept_min,
+    awt_min,
+    is_hd_order,
+    hdm_minutes_added,
+    awt10
+
+  FROM base
+
+  WHERE created_at_local IS NOT NULL
+),
+
+created_orders_by_minute AS (
+  SELECT
+    vendor_code,
+    DATETIME_TRUNC(created_at_local, MINUTE) AS created_minute,
+
+    COUNT(DISTINCT peya_order_id) AS total_orders,
+
+    COUNT(DISTINCT IF(
+      non_seamless = FALSE,
+      peya_order_id,
+      NULL
+    )) AS orders_created_seamless,
+
+    SUM(awt10) AS awt10_orders,
+
+    COUNT(DISTINCT IF(
+      non_seamless = TRUE,
+      peya_order_id,
+      NULL
+    )) AS orders_created_non_seamless,
+
+    COUNT(DISTINCT IF(
+      is_slow_order,
+      peya_order_id,
+      NULL
+    )) AS slow_orders,
+
+    COUNT(DISTINCT IF(
+      is_hd_order,
+      peya_order_id,
+      NULL
+    )) AS hdm_orders,
+
+    COUNT(DISTINCT IF(
+      ept_min IS NOT NULL,
+      peya_order_id,
+      NULL
+    )) AS ept_orders,
+
+    SUM(
+      COALESCE(ept_min, 0)
+    ) AS ept_total_minutes,
+
+    COUNT(DISTINCT IF(
+      awt_min IS NOT NULL,
+      peya_order_id,
+      NULL
+    )) AS awt_orders,
+
+    SUM(
+      COALESCE(awt_min, 0)
+    ) AS awt_total_minutes,
+
+    SUM(
+      IF(
+        is_hd_order,
+        hdm_minutes_added,
+        0
+      )
+    ) AS hdm_total_minutes_added
+
+  FROM orders_created
+
+  GROUP BY
+    vendor_code,
+    DATETIME_TRUNC(created_at_local, MINUTE)
+),
+
+basefull AS (
+  SELECT
+    ts.datetime_ref,
+    v.vendor_code,
+    v.store_name,
+    v.franchise_name,
+    v.vertical_type,
+    v.grade
+
+  FROM time_series ts
+
+  CROSS JOIN (
+    SELECT DISTINCT
+      vendor_code,
+      store_name,
+      franchise_name,
+      vertical_type,
+      grade
+
+    FROM qord
+  ) v
+),
+
+minute_level AS (
+  SELECT
+    basefull.grade,
+    basefull.vendor_code,
+    basefull.store_name,
+    basefull.franchise_name,
+    basefull.vertical_type,
+    basefull.datetime_ref,
+
+    MAX(
+      COALESCE(cobm.awt10_orders, 0)
+    ) AS awt10_orders,
+
+    COUNT(DISTINCT qord.peya_order_id) AS queued_orders,
+    COUNT(DISTINCT rnpu.transition_rider) AS riders_near_pu,
+
+    MAX(
+      COALESCE(cobm.total_orders, 0)
+    ) AS total_orders,
+
+    MAX(
+      COALESCE(cobm.orders_created_seamless, 0)
+    ) AS orders_created_seamless,
+
+    MAX(
+      COALESCE(cobm.orders_created_non_seamless, 0)
+    ) AS orders_created_non_seamless,
+
+    MAX(
+      COALESCE(cobm.slow_orders, 0)
+    ) AS slow_orders,
+
+    MAX(
+      COALESCE(cobm.hdm_orders, 0)
+    ) AS hdm_orders,
+
+    MAX(
+      COALESCE(cobm.ept_orders, 0)
+    ) AS ept_orders,
+
+    MAX(
+      COALESCE(cobm.ept_total_minutes, 0)
+    ) AS ept_total_minutes,
+
+    MAX(
+      COALESCE(cobm.awt_orders, 0)
+    ) AS awt_orders,
+
+    MAX(
+      COALESCE(cobm.awt_total_minutes, 0)
+    ) AS awt_total_minutes,
+
+    MAX(
+      COALESCE(cobm.hdm_total_minutes_added, 0)
+    ) AS hdm_total_minutes_added
+
+  FROM basefull
+
+  LEFT JOIN qord
+    ON qord.vendor_code = basefull.vendor_code
+    AND qord.vendor_accepted <= basefull.datetime_ref
+    AND qord.rider_pu > basefull.datetime_ref
+
+  LEFT JOIN rnpu
+    ON rnpu.vendor_code = basefull.vendor_code
+    AND rnpu.transition_at <= basefull.datetime_ref
+    AND rnpu.next_transition_at > basefull.datetime_ref
+
+  LEFT JOIN created_orders_by_minute cobm
+    ON cobm.vendor_code = basefull.vendor_code
+    AND cobm.created_minute = basefull.datetime_ref
+
+  GROUP BY
+    basefull.grade,
+    basefull.vendor_code,
+    basefull.store_name,
+    basefull.franchise_name,
+    basefull.vertical_type,
+    basefull.datetime_ref
+)
+
+SELECT
+  franchise_name,
+  vertical_type,
+  grade,
+  queued_orders,
+  riders_near_pu,
+
+  COUNT(*) AS minutes,
+  COUNT(DISTINCT vendor_code) AS vendors,
+
+  SUM(total_orders) AS total_orders,
+  SUM(orders_created_seamless) AS orders_created_seamless,
+  SUM(orders_created_non_seamless) AS orders_created_non_seamless,
+
+  ROUND(
+    100 * SAFE_DIVIDE(
+      SUM(orders_created_seamless),
+      SUM(total_orders)
+    ),
+    2
+  ) AS seamless_pct,
+
+  SUM(slow_orders) AS slow_orders,
+
+  ROUND(
+    100 * SAFE_DIVIDE(
+      SUM(slow_orders),
+      SUM(total_orders)
+    ),
+    2
+  ) AS slow_orders_pct,
+
+  -- Valores necesarios para recalcular EPT exacto
+  SUM(ept_orders) AS ept_orders,
+
+  ROUND(
+    SUM(ept_total_minutes),
+    2
+  ) AS ept_total_minutes,
+
+  ROUND(
+    SAFE_DIVIDE(
+      SUM(ept_total_minutes),
+      SUM(ept_orders)
+    ),
+    2
+  ) AS avg_ept,
+
+  -- Valores necesarios para recalcular AWT exacto
+  SUM(awt_orders) AS awt_orders,
+
+  ROUND(
+    SUM(awt_total_minutes),
+    2
+  ) AS awt_total_minutes,
+
+  ROUND(
+    SAFE_DIVIDE(
+      SUM(awt_total_minutes),
+      SUM(awt_orders)
+    ),
+    2
+  ) AS avg_awt,
+
+  SUM(hdm_orders) AS hdm_orders,
+
+  ROUND(
+    100 * SAFE_DIVIDE(
+      SUM(hdm_orders),
+      SUM(total_orders)
+    ),
+    2
+  ) AS hdm_orders_pct,
+
+  ROUND(
+    SUM(hdm_total_minutes_added),
+    2
+  ) AS hdm_total_minutes_added,
+
+  ROUND(
+    SAFE_DIVIDE(
+      SUM(hdm_total_minutes_added),
+      SUM(hdm_orders)
+    ),
+    2
+  ) AS avg_hdm_minutes_added,
+
+  ROUND(
+  SUM(awt10_orders),
+  2
+) AS awt10_orders,
+
+ROUND(
+  100 * SAFE_DIVIDE(
+    SUM(awt10_orders),
+    SUM(total_orders)
+  ),
+  2
+) AS awt10_pct,
+
+FROM minute_level
+
+WHERE queued_orders > 0
+
+GROUP BY
+  franchise_name,
+  vertical_type,
+  grade,
+  queued_orders,
+  riders_near_pu
+
+ORDER BY
+  grade,
+  queued_orders,
+  riders_near_pu;

@@ -1,0 +1,41 @@
+SELECT
+  partner_id,
+  partner_name,
+  ROUND(AVG(preparation_buffer), 2) AS avg_buffer,
+  AVG(preparation_time) AS avg_preptime
+FROM (
+  SELECT
+    pa.partner_id,
+    pa.partner_name,
+    tes.* EXCEPT (vendor_code)
+  FROM `peya-bi-tools-pro.il_core.dim_partner` AS pa
+  LEFT JOIN (
+    SELECT
+      v.vendor_code,
+      tb.day_of_week,
+      tb.time_of_day,
+      tb.preparation_time / 60 AS preparation_time,
+      tb.preparation_buffer / 60 AS preparation_buffer,
+      tb.state
+    FROM `peya-data-origins-pro.cl_hurrier.vendors` AS v,
+    UNNEST(v.time_buckets) AS tb
+    WHERE v.entity_id = 'PY_CL'
+    -- AND v.vendor_code = '150793'
+  ) AS tes
+    ON tes.vendor_code = CAST(pa.partner_id AS STRING)
+  WHERE pa.partner_id IN (
+    360610,
+    377400,
+    360616,
+    356361,
+    360605,
+    360598
+  )
+    AND pa.country_id = 2
+    AND pa.is_online
+)
+GROUP BY
+  partner_id,
+  partner_name
+ORDER BY
+  partner_id;

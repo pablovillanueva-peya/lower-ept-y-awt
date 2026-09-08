@@ -1,0 +1,1155 @@
+-- ============================================================================
+-- EVENT-DRIVEN SATURATION STATES | BigQuery / GoogleSQL SCRIPT
+--
+-- IMPORTANT:
+--   Run the complete file as a BigQuery multi-statement script.
+--   Heavy stages are materialized as TEMP TABLES to prevent the planner from
+--   expanding the same CTE tree repeatedly. TEMP TABLES disappear when the
+--   script finishes; only the final SELECT is returned.
+--
+-- Final grain:
+--   franchise_name x grade x queued_orders x riders_near_pu
+--   x max_awt_completed_minutes
+--
+-- Attribution:
+--   An order created at T is attributed to the state at T - 1 microsecond.
+--
+-- Live AWT used by the state timeline:
+--   committed_pickup_at = COALESCE(original scheduled pickup,
+--                                  updated scheduled pickup)
+--   awt_start_at = GREATEST(committed_pickup_at, near_pickup_at)
+--   awt_end_at   = next transition, pickup, cancellation or analysis end
+--
+-- Outcome definitions:
+--   final AWT          = timings.avoidable_wait_time
+--   total observed AWT = sum of all reconstructed rider-attempt intervals
+--   previous/lost AWT = intervals that do not contain the final pickup
+--   pickup time        = final pickup - order created_at_local
+-- ============================================================================
+
+
+-- ==========================================================================
+-- 0. PARAMETERS
+-- Change only these two dates for another analysis window.
+-- ==========================================================================
+
+DECLARE analysis_start_date DATE DEFAULT DATE '2026-07-06';
+DECLARE analysis_end_date DATE DEFAULT DATE '2026-07-19';
+
+DECLARE analysis_start_at DATETIME DEFAULT DATETIME(
+  analysis_start_date,
+  TIME '00:00:00'
+);
+
+DECLARE analysis_end_at DATETIME DEFAULT DATETIME(
+  DATE_ADD(analysis_end_date, INTERVAL 1 DAY),
+  TIME '00:00:00'
+);
+
+DECLARE source_start_date DATE DEFAULT DATE_SUB(
+  analysis_start_date,
+  INTERVAL 1 DAY
+);
+
+
+-- ==========================================================================
+-- 1. ORDER SCOPE AND OUTCOME LOOKUPS
+-- ==========================================================================
+
+CREATE TEMP TABLE tmp_vendor_grades AS
+SELECT
+  SAFE_CAST(v.vendor_code AS INT64) AS vendor_code,
+  ve.vendor_monitor.vendor_grade AS grade
+FROM `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendors` AS v
+LEFT JOIN UNNEST(v.vendor) AS ve
+LEFT JOIN `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_attributes_latest` AS latest
+  ON latest.vendor_code = v.vendor_code
+WHERE v.entity_id = 'PY_CL'
+  AND latest.entity_id = 'PY_CL'
+  AND ve.is_latest
+  AND ve.is_active
+  AND latest.vendor_code IS NOT NULL
+QUALIFY ROW_NUMBER() OVER (
+  PARTITION BY SAFE_CAST(v.vendor_code AS INT64)
+  ORDER BY DATE(ve.vendor_monitor.last_updated_at) DESC
+) = 1;
+
+
+-- One row per order in the selected franchise/date scope.
+-- Keeping the nested deliveries array here avoids rescanning the fact table.
+CREATE TEMP TABLE tmp_orders_scope AS
+SELECT
+  l.peya_order_id,
+  SAFE_CAST(l.vendor.vendor_code AS INT64) AS vendor_code,
+  partner.partner_name AS store_name,
+  partner.franchise.franchise_name AS franchise_name,
+  COALESCE(vg.grade, 'NO_GRADE') AS grade,
+  l.created_at_local,
+  l.order_status,
+  COALESCE(
+    l.original_scheduled_pickup_at_local,
+    l.updated_scheduled_pickup_at_local
+  ) AS committed_pickup_at,
+  l.deliveries,
+  SAFE_DIVIDE(SAFE_CAST(l.estimated_prep_time AS FLOAT64), 60)
+    AS ept_minutes,
+  IF(
+    l.timings.avoidable_wait_time IS NULL,
+    NULL,
+    SAFE_DIVIDE(
+      GREATEST(SAFE_CAST(l.timings.avoidable_wait_time AS INT64), 0),
+      60
+    )
+  ) AS final_awt_minutes
+FROM `peya-bi-tools-pro.il_logistics.fact_logistic_orders` AS l
+LEFT JOIN `peya-bi-tools-pro.il_core.dim_partner` AS partner
+  ON SAFE_CAST(l.vendor.vendor_code AS INT64)
+    = SAFE_CAST(partner.partner_id AS INT64)
+LEFT JOIN tmp_vendor_grades AS vg
+  ON SAFE_CAST(l.vendor.vendor_code AS INT64) = vg.vendor_code
+WHERE l.country_code = 'cl'
+  AND l.created_date_local BETWEEN source_start_date AND analysis_end_date
+  AND l.peya_order_id IS NOT NULL
+  AND l.vendor.vertical_type = 'restaurants'
+
+  -- Current franchise scope. Replace or remove this block as needed.
+  AND (
+    LOWER(partner.franchise.franchise_name) LIKE '%papa%'
+    OR LOWER(partner.franchise.franchise_name) LIKE '%melt%'
+    OR LOWER(partner.franchise.franchise_name) LIKE '%under%'
+  );
+
+
+CREATE TEMP TABLE tmp_hdm AS
+SELECT
+  SAFE_CAST(gvo.order_code AS INT64) AS order_code,
+  LOGICAL_OR(COALESCE(gvo.high_demand_mode.is_hd_order, FALSE))
+    AS is_hd_order,
+  MAX(
+    IF(
+      gvo.high_demand_mode.is_hd_order,
+      COALESCE(
+        SAFE_CAST(gvo.high_demand_mode.minutes_added AS FLOAT64),
+        0
+      ),
+      0
+    )
+  ) AS hdm_minutes_added
+FROM `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_orders` AS gvo
+INNER JOIN tmp_orders_scope AS scope
+  ON scope.peya_order_id = SAFE_CAST(gvo.order_code AS INT64)
+WHERE gvo.country_code = 'cl'
+  AND gvo.created_date BETWEEN source_start_date AND analysis_end_date
+  AND gvo.requested_pickup_at IS NULL
+GROUP BY SAFE_CAST(gvo.order_code AS INT64);
+
+
+-- Weighted AWT10 attribution; it can be fractional.
+CREATE TEMP TABLE tmp_order_casuistics AS
+SELECT
+  CAST(n.order_id AS STRING) AS order_id,
+  SAFE_CAST(n.partner_id AS INT64) AS vendor_code,
+  SUM(
+    IF(
+      IFNULL(n.undispatch_reason, '') != 'Late Order Preparation',
+      COALESCE(n.TR_STAFFING_AND_PARTNER_PERFO, 0) / 2
+        + COALESCE(n.TR_STAFFING_RIDER_AND_PARTNER_PERFO, 0) / 3
+        + COALESCE(n.TR_RIDER_AND_PARTNER_PERFO, 0) / 2
+        + COALESCE(n.TR_PARTNER_PERFO, 0),
+      0
+    )
+  ) AS awt10_attributed_orders
+FROM `peya-delivery-and-support.automated_tables_reports.non_seamless_reasons` AS n
+INNER JOIN tmp_orders_scope AS scope
+  ON CAST(scope.peya_order_id AS STRING) = CAST(n.order_id AS STRING)
+  AND scope.vendor_code = SAFE_CAST(n.partner_id AS INT64)
+WHERE n.country_name = 'Chile'
+  AND DATE(n.created_date_local)
+    BETWEEN source_start_date AND analysis_end_date
+GROUP BY order_id, vendor_code;
+
+
+-- Collapse NS to one row per scoped order so it cannot multiply the fact row.
+CREATE TEMP TABLE tmp_non_seamless_orders AS
+SELECT
+  ns.platform_order_code,
+  LOGICAL_OR(COALESCE(ns.non_seamless_order, FALSE)) AS non_seamless,
+  LOGICAL_OR(COALESCE(SAFE_CAST(ns.is_slow_order AS BOOL), FALSE))
+    AS is_slow_order
+FROM `peya-datamarts-pro.dm_fulfillment.non_seamless_delivery_order_level` AS ns
+INNER JOIN tmp_orders_scope AS scope
+  ON scope.peya_order_id = ns.platform_order_code
+GROUP BY ns.platform_order_code;
+
+
+CREATE TEMP TABLE tmp_orders_base AS
+SELECT
+  scope.*,
+  COALESCE(ns.non_seamless, FALSE) AS non_seamless,
+  COALESCE(ns.is_slow_order, FALSE) AS is_slow_order,
+  ns.platform_order_code IS NOT NULL AS has_non_seamless_record,
+  COALESCE(h.is_hd_order, FALSE) AS is_hd_order,
+  COALESCE(h.hdm_minutes_added, 0) AS hdm_minutes_added,
+  COALESCE(c.awt10_attributed_orders, 0) AS awt10_attributed_orders
+FROM tmp_orders_scope AS scope
+LEFT JOIN tmp_non_seamless_orders AS ns
+  ON ns.platform_order_code = scope.peya_order_id
+LEFT JOIN tmp_hdm AS h
+  ON h.order_code = scope.peya_order_id
+LEFT JOIN tmp_order_casuistics AS c
+  ON c.order_id = CAST(scope.peya_order_id AS STRING)
+  AND c.vendor_code = scope.vendor_code;
+
+
+-- ==========================================================================
+-- 2. ALL DELIVERY ATTEMPTS AND TRANSITIONS
+-- ==========================================================================
+
+CREATE TEMP TABLE tmp_delivery_attempts AS
+SELECT
+  ob.peya_order_id,
+  ob.vendor_code,
+  delivery.delivery_sk,
+  delivery.delivery_id,
+  delivery.rider_id,
+  delivery.rider_picked_up_at_local,
+  delivery.transitions
+FROM tmp_orders_base AS ob
+CROSS JOIN UNNEST(ob.deliveries) AS delivery
+WHERE delivery.delivery_id IS NOT NULL
+  AND COALESCE(delivery.is_returning, FALSE) = FALSE;
+
+
+CREATE TEMP TABLE tmp_final_delivery_by_order AS
+SELECT
+  da.peya_order_id,
+  da.delivery_id AS final_delivery_id,
+  da.rider_id AS final_rider_id,
+  da.rider_picked_up_at_local AS final_rider_picked_up_at
+FROM tmp_delivery_attempts AS da
+WHERE da.rider_picked_up_at_local IS NOT NULL
+QUALIFY ROW_NUMBER() OVER (
+  PARTITION BY da.peya_order_id
+  ORDER BY da.rider_picked_up_at_local DESC, da.delivery_id DESC
+) = 1;
+
+
+CREATE TEMP TABLE tmp_delivery_transition_timeline AS
+SELECT
+  da.peya_order_id,
+  da.vendor_code,
+  da.delivery_sk,
+  da.delivery_id,
+  da.rider_picked_up_at_local AS delivery_rider_picked_up_at,
+  transition.transition_sk,
+  transition.rider_id,
+  transition.state,
+  transition.undispatch_type,
+  DATETIME(transition.created_at, 'America/Santiago') AS transition_at,
+  LEAD(DATETIME(transition.created_at, 'America/Santiago')) OVER (
+    PARTITION BY da.peya_order_id, da.delivery_id
+    ORDER BY transition.created_at, transition.transition_sk
+  ) AS next_transition_at
+FROM tmp_delivery_attempts AS da
+CROSS JOIN UNNEST(da.transitions) AS transition
+WHERE transition.created_at IS NOT NULL;
+
+
+-- Explicit order_cancelled is preferred. A generic cancelled state is used
+-- only when the top-level order is cancelled, so reassignment does not close it.
+CREATE TEMP TABLE tmp_order_cancel_times AS
+SELECT
+  ob.peya_order_id,
+  COALESCE(
+    MAX(IF(
+      dtt.undispatch_type = 'order_cancelled',
+      dtt.transition_at,
+      NULL
+    )),
+    MAX(IF(
+      LOWER(COALESCE(ob.order_status, '')) = 'cancelled'
+        AND dtt.state = 'cancelled',
+      dtt.transition_at,
+      NULL
+    ))
+  ) AS order_cancelled_at
+FROM tmp_orders_base AS ob
+LEFT JOIN tmp_delivery_transition_timeline AS dtt
+  USING (peya_order_id)
+GROUP BY ob.peya_order_id;
+
+
+-- Remove the deliveries array before the event/timeline stages.
+CREATE TEMP TABLE tmp_orders_with_queue_end AS
+SELECT
+  ob.peya_order_id,
+  ob.vendor_code,
+  ob.store_name,
+  ob.franchise_name,
+  ob.grade,
+  ob.created_at_local,
+  ob.order_status,
+  ob.committed_pickup_at,
+  ob.non_seamless,
+  ob.is_slow_order,
+  ob.has_non_seamless_record,
+  ob.ept_minutes,
+  ob.final_awt_minutes,
+  ob.is_hd_order,
+  ob.hdm_minutes_added,
+  ob.awt10_attributed_orders,
+  fd.final_delivery_id,
+  fd.final_rider_id,
+  fd.final_rider_picked_up_at,
+  oct.order_cancelled_at,
+  ob.created_at_local AS queue_start_at,
+  CASE
+    WHEN fd.final_rider_picked_up_at IS NOT NULL
+      THEN fd.final_rider_picked_up_at
+    WHEN oct.order_cancelled_at IS NOT NULL
+      THEN oct.order_cancelled_at
+    WHEN LOWER(COALESCE(ob.order_status, '')) != 'cancelled'
+      THEN analysis_end_at
+    ELSE NULL
+  END AS queue_end_at
+FROM tmp_orders_base AS ob
+LEFT JOIN tmp_final_delivery_by_order AS fd
+  USING (peya_order_id)
+LEFT JOIN tmp_order_cancel_times AS oct
+  USING (peya_order_id);
+
+
+CREATE TEMP TABLE tmp_orders_for_timeline AS
+SELECT
+  peya_order_id,
+  vendor_code,
+  store_name,
+  franchise_name,
+  grade,
+  committed_pickup_at,
+  queue_start_at,
+  queue_end_at,
+  final_delivery_id,
+  final_rider_id,
+  final_rider_picked_up_at
+FROM tmp_orders_with_queue_end
+WHERE queue_end_at IS NOT NULL
+  AND created_at_local < analysis_end_at
+  AND queue_end_at > analysis_start_at
+  AND queue_end_at > created_at_local;
+
+
+CREATE TEMP TABLE tmp_completed_orders AS
+SELECT
+  peya_order_id,
+  vendor_code,
+  store_name,
+  franchise_name,
+  grade,
+  created_at_local,
+  non_seamless,
+  is_slow_order,
+  has_non_seamless_record,
+  ept_minutes,
+  final_awt_minutes,
+  is_hd_order,
+  hdm_minutes_added,
+  awt10_attributed_orders,
+  final_delivery_id,
+  final_rider_id,
+  final_rider_picked_up_at,
+  SAFE_DIVIDE(
+    DATETIME_DIFF(
+      final_rider_picked_up_at,
+      created_at_local,
+      SECOND
+    ),
+    60
+  ) AS pickup_time_minutes
+FROM tmp_orders_with_queue_end
+WHERE final_rider_picked_up_at IS NOT NULL
+  AND created_at_local < analysis_end_at
+  AND final_rider_picked_up_at > analysis_start_at
+  AND final_rider_picked_up_at > created_at_local;
+
+
+CREATE TEMP TABLE tmp_vendors_in_scope AS
+SELECT DISTINCT
+  vendor_code,
+  store_name,
+  franchise_name,
+  grade
+FROM tmp_orders_for_timeline;
+
+
+-- ==========================================================================
+-- 3. RIDER NEAR-PICKUP AND RECONSTRUCTED AWT INTERVALS
+-- ==========================================================================
+
+CREATE TEMP TABLE tmp_near_pickup_fragments AS
+SELECT
+  fragment.*
+FROM (
+  SELECT
+    oft.vendor_code,
+    oft.peya_order_id,
+    dtt.delivery_sk,
+    dtt.delivery_id,
+    dtt.transition_sk,
+    dtt.rider_id,
+    oft.committed_pickup_at,
+    oft.final_delivery_id,
+    oft.final_rider_id,
+    oft.final_rider_picked_up_at,
+    GREATEST(
+      dtt.transition_at,
+      oft.queue_start_at
+    ) AS near_start_at,
+    LEAST(
+      COALESCE(
+        dtt.next_transition_at,
+        dtt.delivery_rider_picked_up_at,
+        oft.queue_end_at
+      ),
+      oft.queue_end_at
+    ) AS near_end_at
+  FROM tmp_delivery_transition_timeline AS dtt
+  INNER JOIN tmp_orders_for_timeline AS oft
+    USING (peya_order_id, vendor_code)
+  WHERE dtt.state = 'near_pickup'
+    AND dtt.rider_id IS NOT NULL
+    AND dtt.transition_at IS NOT NULL
+) AS fragment
+WHERE fragment.near_end_at > fragment.near_start_at;
+
+
+CREATE TEMP TABLE tmp_near_pickup_fragments_flagged AS
+SELECT
+  fragment_with_prior.*,
+  IF(
+    fragment_with_prior.prior_max_near_end_at IS NULL
+      OR fragment_with_prior.prior_max_near_end_at
+        < fragment_with_prior.near_start_at,
+    1,
+    0
+  ) AS starts_new_near_interval
+FROM (
+  SELECT
+    fragment.*,
+    MAX(fragment.near_end_at) OVER (
+      PARTITION BY
+        fragment.peya_order_id,
+        fragment.delivery_id,
+        fragment.rider_id
+      ORDER BY
+        fragment.near_start_at,
+        fragment.near_end_at,
+        fragment.transition_sk
+      ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+    ) AS prior_max_near_end_at
+  FROM tmp_near_pickup_fragments AS fragment
+) AS fragment_with_prior;
+
+
+CREATE TEMP TABLE tmp_near_pickup_fragments_numbered AS
+SELECT
+  flagged.*,
+  SUM(flagged.starts_new_near_interval) OVER (
+    PARTITION BY
+      flagged.peya_order_id,
+      flagged.delivery_id,
+      flagged.rider_id
+    ORDER BY
+      flagged.near_start_at,
+      flagged.near_end_at,
+      flagged.transition_sk
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS near_interval_id
+FROM tmp_near_pickup_fragments_flagged AS flagged;
+
+
+CREATE TEMP TABLE tmp_rider_near_intervals AS
+SELECT
+  vendor_code,
+  peya_order_id,
+  delivery_sk,
+  delivery_id,
+  rider_id,
+  near_interval_id,
+  committed_pickup_at,
+  final_delivery_id,
+  final_rider_id,
+  final_rider_picked_up_at,
+  MIN(near_start_at) AS near_start_at,
+  MAX(near_end_at) AS near_end_at
+FROM tmp_near_pickup_fragments_numbered
+GROUP BY
+  vendor_code,
+  peya_order_id,
+  delivery_sk,
+  delivery_id,
+  rider_id,
+  near_interval_id,
+  committed_pickup_at,
+  final_delivery_id,
+  final_rider_id,
+  final_rider_picked_up_at;
+
+
+CREATE TEMP TABLE tmp_awt_attempts_raw AS
+SELECT
+  rni.*,
+  GREATEST(rni.committed_pickup_at, rni.near_start_at) AS awt_start_at
+FROM tmp_rider_near_intervals AS rni
+WHERE rni.committed_pickup_at IS NOT NULL;
+
+
+-- Zero-AWT observations remain available for attempt counts and coverage.
+CREATE TEMP TABLE tmp_awt_attempt_observations AS
+SELECT
+  raw.*,
+  GREATEST(
+    DATETIME_DIFF(raw.near_end_at, raw.awt_start_at, SECOND),
+    0
+  ) AS attempt_awt_seconds,
+  raw.delivery_id = raw.final_delivery_id
+    AND raw.rider_id = raw.final_rider_id
+    AND raw.final_rider_picked_up_at >= raw.near_start_at
+    AND raw.final_rider_picked_up_at <= raw.near_end_at
+    AS is_final_pickup_attempt
+FROM tmp_awt_attempts_raw AS raw;
+
+
+-- Only positive intervals can be active or cross an integer-minute threshold.
+CREATE TEMP TABLE tmp_awt_attempt_intervals AS
+SELECT *
+FROM tmp_awt_attempt_observations
+WHERE attempt_awt_seconds > 0;
+
+
+CREATE TEMP TABLE tmp_awt_history_by_order AS
+SELECT
+  peya_order_id,
+  COUNT(*) AS total_awt_attempts,
+  SUM(attempt_awt_seconds) AS total_observed_awt_seconds,
+  MAX(attempt_awt_seconds) AS max_observed_attempt_awt_seconds,
+  COUNTIF(NOT is_final_pickup_attempt) AS previous_awt_attempts,
+  SUM(IF(NOT is_final_pickup_attempt, attempt_awt_seconds, 0))
+    AS previous_awt_seconds,
+  MAX(IF(NOT is_final_pickup_attempt, attempt_awt_seconds, NULL))
+    AS max_previous_awt_seconds,
+  COUNTIF(is_final_pickup_attempt) AS reconstructed_final_awt_attempts,
+  SUM(IF(is_final_pickup_attempt, attempt_awt_seconds, 0))
+    AS reconstructed_final_awt_seconds
+FROM tmp_awt_attempt_observations
+GROUP BY peya_order_id;
+
+
+CREATE TEMP TABLE tmp_orders AS
+SELECT
+  completed.*,
+  history.total_awt_attempts,
+  SAFE_DIVIDE(history.total_observed_awt_seconds, 60)
+    AS total_observed_awt_minutes,
+  SAFE_DIVIDE(history.max_observed_attempt_awt_seconds, 60)
+    AS max_observed_attempt_awt_minutes,
+  history.previous_awt_attempts,
+  SAFE_DIVIDE(history.previous_awt_seconds, 60)
+    AS previous_awt_minutes,
+  SAFE_DIVIDE(history.max_previous_awt_seconds, 60)
+    AS max_previous_awt_minutes,
+  history.reconstructed_final_awt_attempts,
+  SAFE_DIVIDE(history.reconstructed_final_awt_seconds, 60)
+    AS reconstructed_final_awt_minutes
+FROM tmp_completed_orders AS completed
+LEFT JOIN tmp_awt_history_by_order AS history
+  USING (peya_order_id);
+
+
+-- ==========================================================================
+-- 4. EVENT-DRIVEN VENDOR STATE TIMELINE
+-- ==========================================================================
+
+-- For an interval lasting exactly N minutes, the event at its exclusive end
+-- is not generated. This avoids zero-duration states at reassignment/pickup.
+CREATE TEMP TABLE tmp_awt_threshold_events AS
+SELECT
+  threshold.vendor_code,
+  threshold.event_at
+FROM (
+  SELECT
+    awt_interval.vendor_code,
+    awt_interval.near_end_at,
+    DATETIME_ADD(
+      awt_interval.awt_start_at,
+      INTERVAL threshold_seconds SECOND
+    ) AS event_at
+  FROM tmp_awt_attempt_intervals AS awt_interval
+  CROSS JOIN UNNEST(
+    IF(
+      DIV(awt_interval.attempt_awt_seconds - 1, 60) >= 1,
+      GENERATE_ARRAY(
+        60,
+        DIV(awt_interval.attempt_awt_seconds - 1, 60) * 60,
+        60
+      ),
+      ARRAY<INT64>[]
+    )
+  ) AS threshold_seconds
+) AS threshold
+WHERE threshold.event_at < threshold.near_end_at
+  AND threshold.event_at >= analysis_start_at
+  AND threshold.event_at < analysis_end_at;
+
+
+CREATE TEMP TABLE tmp_event_times AS
+SELECT DISTINCT
+  all_events.vendor_code,
+  all_events.event_at
+FROM (
+  SELECT vendor_code, analysis_start_at AS event_at
+  FROM tmp_vendors_in_scope
+
+  UNION ALL
+
+  SELECT vendor_code, analysis_end_at AS event_at
+  FROM tmp_vendors_in_scope
+
+  UNION ALL
+
+  SELECT vendor_code, queue_start_at AS event_at
+  FROM tmp_orders_for_timeline
+
+  UNION ALL
+
+  SELECT vendor_code, queue_end_at AS event_at
+  FROM tmp_orders_for_timeline
+
+  UNION ALL
+
+  SELECT vendor_code, near_start_at AS event_at
+  FROM tmp_rider_near_intervals
+
+  UNION ALL
+
+  SELECT vendor_code, near_end_at AS event_at
+  FROM tmp_rider_near_intervals
+
+  UNION ALL
+
+  SELECT vendor_code, event_at
+  FROM tmp_awt_threshold_events
+) AS all_events
+WHERE all_events.event_at BETWEEN analysis_start_at AND analysis_end_at;
+
+
+CREATE TEMP TABLE tmp_queue_state_after_event AS
+SELECT
+  event.vendor_code,
+  event.event_at,
+  COUNT(DISTINCT queued.peya_order_id) AS queued_orders
+FROM tmp_event_times AS event
+LEFT JOIN tmp_orders_for_timeline AS queued
+  ON queued.vendor_code = event.vendor_code
+  AND queued.queue_start_at <= event.event_at
+  AND queued.queue_end_at > event.event_at
+GROUP BY event.vendor_code, event.event_at;
+
+
+CREATE TEMP TABLE tmp_rider_state_after_event AS
+SELECT
+  event.vendor_code,
+  event.event_at,
+  COUNT(DISTINCT near.rider_id) AS riders_near_pu
+FROM tmp_event_times AS event
+LEFT JOIN tmp_rider_near_intervals AS near
+  ON near.vendor_code = event.vendor_code
+  AND near.near_start_at <= event.event_at
+  AND near.near_end_at > event.event_at
+GROUP BY event.vendor_code, event.event_at;
+
+
+CREATE TEMP TABLE tmp_awt_state_after_event AS
+SELECT
+  event.vendor_code,
+  event.event_at,
+  COALESCE(
+    MAX(DATETIME_DIFF(event.event_at, awt.awt_start_at, SECOND)),
+    0
+  ) AS max_awt_seconds
+FROM tmp_event_times AS event
+LEFT JOIN tmp_awt_attempt_intervals AS awt
+  ON awt.vendor_code = event.vendor_code
+  AND awt.awt_start_at <= event.event_at
+  AND awt.near_end_at > event.event_at
+GROUP BY event.vendor_code, event.event_at;
+
+
+CREATE TEMP TABLE tmp_state_after_event AS
+SELECT
+  queue.vendor_code,
+  queue.event_at,
+  queue.queued_orders,
+  rider.riders_near_pu,
+  DIV(awt.max_awt_seconds, 60) AS max_awt_completed_minutes
+FROM tmp_queue_state_after_event AS queue
+INNER JOIN tmp_rider_state_after_event AS rider
+  USING (vendor_code, event_at)
+INNER JOIN tmp_awt_state_after_event AS awt
+  USING (vendor_code, event_at);
+
+
+CREATE TEMP TABLE tmp_state_intervals AS
+SELECT
+  interval_with_end.*,
+  DATETIME_DIFF(
+    interval_with_end.state_end_at,
+    interval_with_end.event_at,
+    SECOND
+  ) AS duration_seconds
+FROM (
+  SELECT
+    state.*,
+    LEAD(state.event_at) OVER (
+      PARTITION BY state.vendor_code
+      ORDER BY state.event_at
+    ) AS state_end_at
+  FROM tmp_state_after_event AS state
+) AS interval_with_end
+WHERE interval_with_end.state_end_at IS NOT NULL
+  AND interval_with_end.state_end_at > interval_with_end.event_at;
+
+
+CREATE TEMP TABLE tmp_state_intervals_flagged AS
+SELECT
+  state_interval.*,
+  IF(
+    LAG(state_interval.queued_orders) OVER vendor_order
+        = state_interval.queued_orders
+      AND LAG(state_interval.riders_near_pu) OVER vendor_order
+        = state_interval.riders_near_pu
+      AND LAG(state_interval.max_awt_completed_minutes) OVER vendor_order
+        = state_interval.max_awt_completed_minutes,
+    0,
+    1
+  ) AS starts_new_state
+FROM tmp_state_intervals AS state_interval
+WINDOW vendor_order AS (
+  PARTITION BY state_interval.vendor_code
+  ORDER BY state_interval.event_at
+);
+
+
+CREATE TEMP TABLE tmp_state_intervals_numbered AS
+SELECT
+  flagged.*,
+  SUM(flagged.starts_new_state) OVER (
+    PARTITION BY flagged.vendor_code
+    ORDER BY flagged.event_at
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS state_sequence_id
+FROM tmp_state_intervals_flagged AS flagged;
+
+
+CREATE TEMP TABLE tmp_state_timeline AS
+SELECT
+  numbered.vendor_code,
+  vendor.store_name,
+  vendor.franchise_name,
+  vendor.grade,
+  numbered.state_sequence_id,
+  MIN(numbered.event_at) AS state_start_at,
+  MAX(numbered.state_end_at) AS state_end_at,
+  numbered.queued_orders,
+  numbered.riders_near_pu,
+  numbered.max_awt_completed_minutes,
+  SUM(numbered.duration_seconds) AS duration_seconds
+FROM tmp_state_intervals_numbered AS numbered
+INNER JOIN tmp_vendors_in_scope AS vendor
+  USING (vendor_code)
+GROUP BY
+  numbered.vendor_code,
+  vendor.store_name,
+  vendor.franchise_name,
+  vendor.grade,
+  numbered.state_sequence_id,
+  numbered.queued_orders,
+  numbered.riders_near_pu,
+  numbered.max_awt_completed_minutes;
+
+
+-- ==========================================================================
+-- 5. STATE IMMEDIATELY BEFORE EACH ORDER CREATION
+-- ==========================================================================
+
+CREATE TEMP TABLE tmp_order_creation_times AS
+SELECT DISTINCT
+  vendor_code,
+  created_at_local AS order_created_at
+FROM tmp_orders
+WHERE created_at_local >= analysis_start_at
+  AND created_at_local < analysis_end_at;
+
+
+CREATE TEMP TABLE tmp_queue_state_before_creation AS
+SELECT
+  creation.vendor_code,
+  creation.order_created_at,
+  COUNT(DISTINCT existing.peya_order_id) AS queued_orders
+FROM tmp_order_creation_times AS creation
+LEFT JOIN tmp_orders_for_timeline AS existing
+  ON existing.vendor_code = creation.vendor_code
+  AND existing.queue_start_at < creation.order_created_at
+  AND existing.queue_end_at >= creation.order_created_at
+GROUP BY creation.vendor_code, creation.order_created_at;
+
+
+CREATE TEMP TABLE tmp_rider_state_before_creation AS
+SELECT
+  creation.vendor_code,
+  creation.order_created_at,
+  COUNT(DISTINCT near.rider_id) AS riders_near_pu
+FROM tmp_order_creation_times AS creation
+LEFT JOIN tmp_rider_near_intervals AS near
+  ON near.vendor_code = creation.vendor_code
+  AND near.near_start_at < creation.order_created_at
+  AND near.near_end_at >= creation.order_created_at
+GROUP BY creation.vendor_code, creation.order_created_at;
+
+
+CREATE TEMP TABLE tmp_awt_state_before_creation AS
+SELECT
+  creation.vendor_code,
+  creation.order_created_at,
+  COALESCE(
+    MAX(
+      DATETIME_DIFF(
+        DATETIME_SUB(
+          creation.order_created_at,
+          INTERVAL 1 MICROSECOND
+        ),
+        awt.awt_start_at,
+        SECOND
+      )
+    ),
+    0
+  ) AS max_awt_seconds
+FROM tmp_order_creation_times AS creation
+LEFT JOIN tmp_awt_attempt_intervals AS awt
+  ON awt.vendor_code = creation.vendor_code
+  AND awt.awt_start_at < creation.order_created_at
+  AND awt.near_end_at >= creation.order_created_at
+GROUP BY creation.vendor_code, creation.order_created_at;
+
+
+CREATE TEMP TABLE tmp_state_before_creation AS
+SELECT
+  queue.vendor_code,
+  queue.order_created_at,
+  queue.queued_orders,
+  rider.riders_near_pu,
+  DIV(awt.max_awt_seconds, 60) AS max_awt_completed_minutes
+FROM tmp_queue_state_before_creation AS queue
+INNER JOIN tmp_rider_state_before_creation AS rider
+  USING (vendor_code, order_created_at)
+INNER JOIN tmp_awt_state_before_creation AS awt
+  USING (vendor_code, order_created_at);
+
+
+CREATE TEMP TABLE tmp_orders_attributed_to_state AS
+SELECT
+  orders.*,
+  state.queued_orders,
+  state.riders_near_pu,
+  state.max_awt_completed_minutes
+FROM tmp_orders AS orders
+INNER JOIN tmp_state_before_creation AS state
+  ON state.vendor_code = orders.vendor_code
+  AND state.order_created_at = orders.created_at_local
+WHERE orders.created_at_local >= analysis_start_at
+  AND orders.created_at_local < analysis_end_at;
+
+
+-- ==========================================================================
+-- 6. AGGREGATION BY FRANCHISE, GRADE AND STATE
+-- ==========================================================================
+
+CREATE TEMP TABLE tmp_duration_by_state AS
+SELECT
+  franchise_name,
+  grade,
+  queued_orders,
+  riders_near_pu,
+  max_awt_completed_minutes,
+  COUNT(DISTINCT vendor_code) AS vendors,
+  COUNT(*) AS state_segments,
+  SUM(duration_seconds) AS state_seconds
+FROM tmp_state_timeline
+GROUP BY
+  franchise_name,
+  grade,
+  queued_orders,
+  riders_near_pu,
+  max_awt_completed_minutes;
+
+
+CREATE TEMP TABLE tmp_orders_by_state AS
+SELECT
+  franchise_name,
+  grade,
+  queued_orders,
+  riders_near_pu,
+  max_awt_completed_minutes,
+  COUNT(*) AS total_orders,
+  COUNTIF(has_non_seamless_record) AS orders_with_ns_classification,
+  COUNTIF(non_seamless = FALSE) AS seamless_orders,
+  COUNTIF(non_seamless = TRUE) AS non_seamless_orders,
+  COUNTIF(is_slow_order) AS slow_orders,
+  COUNTIF(ept_minutes IS NOT NULL) AS ept_orders,
+  SUM(COALESCE(ept_minutes, 0)) AS ept_total_minutes,
+
+  -- Official final/last AWT. Old names remain for notebook compatibility.
+  COUNTIF(final_awt_minutes IS NOT NULL) AS awt_orders,
+  SUM(COALESCE(final_awt_minutes, 0)) AS awt_total_minutes,
+
+  COUNTIF(pickup_time_minutes IS NOT NULL) AS pickup_time_orders,
+  SUM(COALESCE(pickup_time_minutes, 0)) AS pickup_time_total_minutes,
+
+  COUNTIF(total_observed_awt_minutes IS NOT NULL) AS total_awt_orders,
+  SUM(COALESCE(total_awt_attempts, 0)) AS total_awt_attempts,
+  SUM(COALESCE(total_observed_awt_minutes, 0))
+    AS total_observed_awt_total_minutes,
+  MAX(max_observed_attempt_awt_minutes)
+    AS max_observed_attempt_awt_minutes,
+
+  COUNTIF(COALESCE(previous_awt_attempts, 0) > 0)
+    AS previous_awt_orders,
+  SUM(COALESCE(previous_awt_attempts, 0)) AS previous_awt_attempts,
+  SUM(COALESCE(previous_awt_minutes, 0)) AS previous_awt_total_minutes,
+  MAX(max_previous_awt_minutes) AS max_previous_awt_minutes,
+
+  COUNTIF(COALESCE(reconstructed_final_awt_attempts, 0) > 0)
+    AS reconstructed_final_awt_orders,
+  SUM(COALESCE(reconstructed_final_awt_attempts, 0))
+    AS reconstructed_final_awt_attempts,
+  SUM(COALESCE(reconstructed_final_awt_minutes, 0))
+    AS reconstructed_final_awt_total_minutes,
+
+  COUNTIF(is_hd_order) AS hdm_orders,
+  SUM(IF(is_hd_order, hdm_minutes_added, 0)) AS hdm_total_minutes_added,
+  SUM(awt10_attributed_orders) AS awt10_attributed_orders
+FROM tmp_orders_attributed_to_state
+GROUP BY
+  franchise_name,
+  grade,
+  queued_orders,
+  riders_near_pu,
+  max_awt_completed_minutes;
+
+
+-- ==========================================================================
+-- 7. FINAL STATE-EFFICIENCY MAP
+-- ==========================================================================
+
+SELECT
+  duration.franchise_name,
+  duration.grade,
+  duration.queued_orders,
+  duration.riders_near_pu,
+  duration.max_awt_completed_minutes,
+  duration.vendors,
+  duration.state_segments,
+  duration.state_seconds,
+  ROUND(duration.state_seconds / 60, 2) AS state_minutes,
+  ROUND(duration.state_seconds / 3600, 2) AS state_hours,
+  ROUND(
+    100 * SAFE_DIVIDE(
+      duration.state_seconds,
+      SUM(duration.state_seconds) OVER (
+        PARTITION BY duration.franchise_name, duration.grade
+      )
+    ),
+    4
+  ) AS state_time_share_pct,
+
+  COALESCE(orders.total_orders, 0) AS total_orders,
+  COALESCE(orders.orders_with_ns_classification, 0)
+    AS orders_with_ns_classification,
+  ROUND(
+    100 * SAFE_DIVIDE(
+      orders.orders_with_ns_classification,
+      orders.total_orders
+    ),
+    2
+  ) AS ns_classification_coverage_pct,
+  COALESCE(orders.seamless_orders, 0) AS seamless_orders,
+  COALESCE(orders.non_seamless_orders, 0) AS non_seamless_orders,
+  ROUND(
+    100 * SAFE_DIVIDE(orders.seamless_orders, orders.total_orders),
+    2
+  ) AS seamless_pct,
+  COALESCE(orders.slow_orders, 0) AS slow_orders,
+  ROUND(
+    100 * SAFE_DIVIDE(orders.slow_orders, orders.total_orders),
+    2
+  ) AS slow_orders_pct,
+
+  COALESCE(orders.ept_orders, 0) AS ept_orders,
+  ROUND(COALESCE(orders.ept_total_minutes, 0), 2) AS ept_total_minutes,
+  ROUND(
+    SAFE_DIVIDE(orders.ept_total_minutes, orders.ept_orders),
+    2
+  ) AS avg_ept_minutes,
+  ROUND(
+    COALESCE(orders.ept_total_minutes, 0)
+      - COALESCE(orders.hdm_total_minutes_added, 0),
+    2
+  ) AS ept_without_hdm_total_minutes,
+  ROUND(
+    SAFE_DIVIDE(
+      COALESCE(orders.ept_total_minutes, 0)
+        - COALESCE(orders.hdm_total_minutes_added, 0),
+      orders.ept_orders
+    ),
+    2
+  ) AS avg_ept_without_hdm_minutes,
+
+  -- Existing fields: official last/final AWT.
+  COALESCE(orders.awt_orders, 0) AS awt_orders,
+  ROUND(COALESCE(orders.awt_total_minutes, 0), 2) AS awt_total_minutes,
+  ROUND(
+    SAFE_DIVIDE(orders.awt_total_minutes, orders.awt_orders),
+    2
+  ) AS avg_awt_minutes,
+
+  -- Explicit aliases for that same official final AWT.
+  COALESCE(orders.awt_orders, 0) AS final_awt_orders,
+  ROUND(COALESCE(orders.awt_total_minutes, 0), 2)
+    AS final_awt_total_minutes,
+  ROUND(
+    SAFE_DIVIDE(orders.awt_total_minutes, orders.awt_orders),
+    2
+  ) AS avg_final_awt_minutes,
+  ROUND(
+    100 * SAFE_DIVIDE(orders.awt_orders, orders.total_orders),
+    2
+  ) AS final_awt_coverage_pct,
+
+  COALESCE(orders.pickup_time_orders, 0) AS pickup_time_orders,
+  ROUND(COALESCE(orders.pickup_time_total_minutes, 0), 2)
+    AS pickup_time_total_minutes,
+  ROUND(
+    SAFE_DIVIDE(
+      orders.pickup_time_total_minutes,
+      orders.pickup_time_orders
+    ),
+    2
+  ) AS avg_pickup_time_minutes,
+
+  -- All reconstructed rider-attempt AWT intervals.
+  COALESCE(orders.total_awt_orders, 0) AS total_awt_orders,
+  COALESCE(orders.total_awt_attempts, 0) AS total_awt_attempts,
+  ROUND(COALESCE(orders.total_observed_awt_total_minutes, 0), 2)
+    AS total_observed_awt_total_minutes,
+  ROUND(
+    SAFE_DIVIDE(
+      orders.total_observed_awt_total_minutes,
+      orders.total_awt_orders
+    ),
+    2
+  ) AS avg_total_observed_awt_minutes_per_order,
+  ROUND(
+    SAFE_DIVIDE(
+      orders.total_observed_awt_total_minutes,
+      orders.total_awt_attempts
+    ),
+    2
+  ) AS avg_observed_awt_minutes_per_attempt,
+  ROUND(COALESCE(orders.max_observed_attempt_awt_minutes, 0), 2)
+    AS max_observed_attempt_awt_minutes,
+  ROUND(
+    100 * SAFE_DIVIDE(orders.total_awt_orders, orders.total_orders),
+    2
+  ) AS reconstructed_awt_coverage_pct,
+
+  -- Reassignment/lost AWT.
+  COALESCE(orders.previous_awt_orders, 0) AS previous_awt_orders,
+  COALESCE(orders.previous_awt_attempts, 0) AS previous_awt_attempts,
+  ROUND(
+    100 * SAFE_DIVIDE(orders.previous_awt_orders, orders.total_orders),
+    2
+  ) AS previous_awt_orders_pct,
+  ROUND(COALESCE(orders.previous_awt_total_minutes, 0), 2)
+    AS previous_awt_total_minutes,
+  ROUND(
+    SAFE_DIVIDE(
+      orders.previous_awt_total_minutes,
+      orders.previous_awt_orders
+    ),
+    2
+  ) AS avg_previous_awt_minutes_per_affected_order,
+  ROUND(
+    SAFE_DIVIDE(
+      orders.previous_awt_total_minutes,
+      orders.previous_awt_attempts
+    ),
+    2
+  ) AS avg_previous_awt_minutes_per_attempt,
+  ROUND(COALESCE(orders.max_previous_awt_minutes, 0), 2)
+    AS max_previous_awt_minutes,
+
+  -- Reconstructed interval containing the final pickup (audit metric).
+  COALESCE(orders.reconstructed_final_awt_orders, 0)
+    AS reconstructed_final_awt_orders,
+  COALESCE(orders.reconstructed_final_awt_attempts, 0)
+    AS reconstructed_final_awt_attempts,
+  ROUND(COALESCE(orders.reconstructed_final_awt_total_minutes, 0), 2)
+    AS reconstructed_final_awt_total_minutes,
+  ROUND(
+    SAFE_DIVIDE(
+      orders.reconstructed_final_awt_total_minutes,
+      orders.reconstructed_final_awt_orders
+    ),
+    2
+  ) AS avg_reconstructed_final_awt_minutes,
+
+  COALESCE(orders.hdm_orders, 0) AS hdm_orders,
+  ROUND(
+    100 * SAFE_DIVIDE(orders.hdm_orders, orders.total_orders),
+    2
+  ) AS hdm_orders_pct,
+  ROUND(COALESCE(orders.hdm_total_minutes_added, 0), 2)
+    AS hdm_total_minutes_added,
+  ROUND(
+    SAFE_DIVIDE(orders.hdm_total_minutes_added, orders.hdm_orders),
+    2
+  ) AS avg_hdm_minutes_added,
+  ROUND(
+    SAFE_DIVIDE(orders.hdm_total_minutes_added, orders.total_orders),
+    2
+  ) AS avg_hdm_impact_per_order,
+  ROUND(COALESCE(orders.awt10_attributed_orders, 0), 2)
+    AS awt10_attributed_orders,
+  ROUND(
+    100 * SAFE_DIVIDE(orders.awt10_attributed_orders, orders.total_orders),
+    2
+  ) AS awt10_attributed_pct
+FROM tmp_duration_by_state AS duration
+LEFT JOIN tmp_orders_by_state AS orders
+  USING (
+    franchise_name,
+    grade,
+    queued_orders,
+    riders_near_pu,
+    max_awt_completed_minutes
+  )
+ORDER BY
+  duration.franchise_name,
+  duration.grade,
+  duration.queued_orders,
+  duration.riders_near_pu,
+  duration.max_awt_completed_minutes;
+
+
+-- To inspect the exact vendor timeline, replace the final SELECT with:
+-- SELECT * FROM tmp_state_timeline ORDER BY vendor_code, state_start_at;

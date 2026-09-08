@@ -1,0 +1,1181 @@
+
+
+INSERT INTO `peya-chile.automated_tables_reports.vendor_ept_fir_weekly` (
+  week_1_start,
+  week_1_end,
+  week_8_start,
+  week_8_end,
+  vendor_code,
+  vendor_name,
+  franchise_name,
+  grade,
+  vertical_type,
+  main_cuisine,
+  city,
+  ept_without_hdm_1w,
+  ept_without_hdm_8w,
+  awt_1w,
+  awt_8w,
+  highpreptime_1w_pct,
+  highpreptime_8w_pct,
+  awt10_1w_pct,
+  awt10_8w_pct,
+  awt_null_1w_pct,
+  awt_0min_1w_pct,
+  awt_1_3min_1w_pct,
+  awt_4plus_1w_pct,
+  ept_diff_1w_vs_8w,
+  ept_diff_pct_1w_vs_8w,
+  fir_1w,
+  fir_vertical_cuisine_1w,
+  fir_share_1w_pct,
+  ept_minus_fir_1w,
+  ept_minus_fir_1w_pct,
+  franchise_median_vendor_code,
+  franchise_median_vendor_name,
+  franchise_median_vendor_ept_1w,
+  franchise_grade_median_vendor_code,
+  franchise_grade_median_vendor_name,
+  franchise_grade_median_vendor_ept_1w,
+  ept_minus_franchise_grade_median_1w,
+  awt_reduction_variable,
+  selected_min_ept,
+  selected_min_flag,
+  orders_1w,
+  orders_8w,
+  orders_with_fir_1w
+)
+
+WITH date_bounds AS (
+
+  -- Semana 1: última semana completa, lunes a domingo.
+  -- Semana 8: octava semana completa contando hacia atrás.
+  SELECT
+    DATE_SUB(
+      DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)),
+      INTERVAL 1 WEEK
+    ) AS week_1_start,
+
+    DATE_SUB(
+      DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)),
+      INTERVAL 1 DAY
+    ) AS week_1_end,
+
+    DATE_SUB(
+      DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)),
+      INTERVAL 8 WEEK
+    ) AS week_8_start,
+
+    DATE_SUB(
+      DATE_SUB(
+        DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)),
+        INTERVAL 7 WEEK
+      ),
+      INTERVAL 1 DAY
+    ) AS week_8_end
+),
+
+
+-- ============================================================
+-- 1. HDM POR ORDEN
+-- Se deja una sola fila por order_code para evitar duplicaciones.
+-- ============================================================
+
+hdm_by_order AS (
+
+  SELECT
+    SAFE_CAST(order_code AS INT64) AS order_code,
+
+    MAX(
+      SAFE_CAST(
+        high_demand_mode.minutes_added AS FLOAT64
+      )
+    ) AS hdm_minutes_added
+
+  FROM `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_orders`
+
+  CROSS JOIN date_bounds
+
+  WHERE country_code = 'cl'
+    AND high_demand_mode.is_hd_order IS TRUE
+    AND requested_pickup_at IS NULL
+    AND SAFE_CAST(order_code AS INT64) IS NOT NULL
+
+    -- Holgura por posibles cambios de fecha UTC/local.
+    -- La semana válida de la orden se define en order_level.
+    AND (
+      created_date BETWEEN DATE_SUB(week_1_start, INTERVAL 1 DAY)
+                       AND DATE_ADD(week_1_end, INTERVAL 1 DAY)
+      OR created_date BETWEEN DATE_SUB(week_8_start, INTERVAL 1 DAY)
+                       AND DATE_ADD(week_8_end, INTERVAL 1 DAY)
+    )
+
+  GROUP BY
+    1
+),
+
+
+-- ============================================================
+-- 2. CASUÍSTICAS POR ORDEN
+-- High preptime y AWT10 son órdenes ponderadas, por lo que sus
+-- numeradores pueden ser decimales. Se consolida primero a una
+-- sola fila por orden para evitar duplicaciones en el join.
+-- ============================================================
+
+order_casuistics AS (
+
+  SELECT
+    SAFE_CAST(n.order_id AS INT64) AS order_code,
+
+    SUM(
+      COALESCE(
+        SAFE_CAST(n.TR_HIGH_PREP_TIME AS FLOAT64),
+        0.0
+      )
+      + COALESCE(
+          SAFE_CAST(
+            n.TR_HIGH_PREP_TIME_AND_DISTANCE AS FLOAT64
+          ),
+          0.0
+        ) / 2.0
+      + COALESCE(
+          SAFE_CAST(
+            n.TR_HIGH_PREP_TIME_AND_DISTANCE_COMBINATION
+              AS FLOAT64
+          ),
+          0.0
+        ) / 2.0
+    ) AS highpreptime_orders,
+
+    SUM(
+      IF(
+        IFNULL(n.undispatch_reason, '')
+          != 'Late Order Preparation',
+
+        COALESCE(
+          SAFE_CAST(
+            n.TR_STAFFING_AND_PARTNER_PERFO AS FLOAT64
+          ),
+          0.0
+        ) / 2.0
+        + COALESCE(
+            SAFE_CAST(
+              n.TR_STAFFING_RIDER_AND_PARTNER_PERFO
+                AS FLOAT64
+            ),
+            0.0
+          ) / 3.0
+        + COALESCE(
+            SAFE_CAST(
+              n.TR_RIDER_AND_PARTNER_PERFO AS FLOAT64
+            ),
+            0.0
+          ) / 2.0
+        + COALESCE(
+            SAFE_CAST(
+              n.TR_PARTNER_PERFO AS FLOAT64
+            ),
+            0.0
+          ),
+
+        0.0
+      )
+    ) AS awt10_orders
+
+  FROM `peya-delivery-and-support.automated_tables_reports.non_seamless_reasons` n
+
+  CROSS JOIN date_bounds b
+
+  WHERE n.country_name = 'Chile'
+    AND SAFE_CAST(n.order_id AS INT64) IS NOT NULL
+    AND (
+      DATE(n.created_date_local)
+        BETWEEN b.week_1_start AND b.week_1_end
+
+      OR DATE(n.created_date_local)
+        BETWEEN b.week_8_start AND b.week_8_end
+    )
+
+  GROUP BY
+    1
+),
+
+
+-- ============================================================
+-- 3. METADATA ACTUAL DEL VENDOR
+-- Una sola fila por partner evita multiplicar órdenes en el join.
+-- ============================================================
+
+partner_metadata AS (
+
+  SELECT
+    p.partner_id AS vendor_code,
+    p.partner_name AS vendor_name,
+    p.franchise.franchise_id AS franchise_id,
+    p.franchise.franchise_name AS franchise_name,
+    p.main_cousine_category_name AS main_cuisine,
+    p.is_online
+
+  FROM `peya-bi-tools-pro.il_core.dim_partner` p
+
+  WHERE p.country_id = 2
+
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY p.partner_id
+    ORDER BY
+      p.is_online DESC,
+      p.partner_name IS NOT NULL DESC,
+      p.partner_id
+  ) = 1
+),
+
+
+-- ============================================================
+-- 4. GRADE ACTUAL DEL VENDOR
+-- Se usa growth_vendor_attributes_latest.
+-- La agregación garantiza una sola fila por vendor.
+-- ============================================================
+
+vendor_grades AS (
+
+  SELECT
+    SAFE_CAST(vendor_code AS INT64) AS vendor_code,
+
+    ARRAY_AGG(
+      vendor_grade IGNORE NULLS
+      ORDER BY vendor_grade
+      LIMIT 1
+    )[SAFE_OFFSET(0)] AS grade
+
+  FROM `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_attributes_latest`
+
+  WHERE entity_id = 'PY_CL'
+    AND SAFE_CAST(vendor_code AS INT64) IS NOT NULL
+
+  GROUP BY
+    1
+),
+
+
+-- ============================================================
+-- 5. BASE A NIVEL ORDEN
+-- EPT sin HDM = EPT de la orden - minutos HDM de la orden.
+-- No se hace UNNEST de deliveries, evitando duplicar órdenes.
+-- ============================================================
+
+order_level AS (
+
+  SELECT
+    l.peya_order_id,
+    CAST(
+      SAFE_CAST(l.vendor.vendor_code AS INT64)
+      AS STRING
+    ) AS vendor_code,
+
+    l.created_at_local,
+    DATE(l.created_date_local) AS order_date,
+
+    CASE
+      WHEN DATE(l.created_date_local)
+        BETWEEN b.week_1_start AND b.week_1_end
+        THEN 1
+
+      WHEN DATE(l.created_date_local)
+        BETWEEN b.week_8_start AND b.week_8_end
+        THEN 8
+    END AS week_number,
+
+    COALESCE(
+      p.vendor_name,
+      l.vendor.name
+    ) AS vendor_name,
+
+    p.franchise_id,
+    p.franchise_name,
+
+    COALESCE(
+      vg.grade,
+      'NO_GRADE'
+    ) AS grade,
+
+    l.vendor.vertical_type AS vertical_type,
+    p.main_cuisine,
+    l.city.city_name AS city,
+
+    SAFE_DIVIDE(
+      l.estimated_prep_time,
+      60.0
+    ) AS ept_minutes,
+
+    SAFE_DIVIDE(
+      l.timings.avoidable_wait_time,
+      60.0
+    ) AS awt_minutes,
+
+    COALESCE(
+      h.hdm_minutes_added,
+      0.0
+    ) AS hdm_minutes_added,
+
+    COALESCE(
+      c.highpreptime_orders,
+      0.0
+    ) AS highpreptime_orders,
+
+    COALESCE(
+      c.awt10_orders,
+      0.0
+    ) AS awt10_orders,
+
+    SAFE_DIVIDE(
+      l.estimated_prep_time,
+      60.0
+    )
+    -
+    COALESCE(
+      h.hdm_minutes_added,
+      0.0
+    ) AS ept_without_hdm_minutes,
+
+    l.food_is_ready_at IS NOT NULL AS has_fir,
+
+    CASE
+      WHEN l.food_is_ready_at IS NOT NULL
+        AND l.created_at IS NOT NULL
+        AND TIMESTAMP_DIFF(
+          l.food_is_ready_at,
+          l.created_at,
+          SECOND
+        ) >= 0
+      THEN SAFE_DIVIDE(
+        TIMESTAMP_DIFF(
+          l.food_is_ready_at,
+          l.created_at,
+          SECOND
+        ),
+        60.0
+      )
+    END AS fir_minutes
+
+  FROM `peya-bi-tools-pro.il_logistics.fact_logistic_orders` l
+
+  CROSS JOIN date_bounds b
+
+  LEFT JOIN partner_metadata p
+    ON SAFE_CAST(l.vendor.vendor_code AS INT64) = p.vendor_code
+
+  LEFT JOIN vendor_grades vg
+    ON SAFE_CAST(l.vendor.vendor_code AS INT64) = vg.vendor_code
+
+  LEFT JOIN hdm_by_order h
+    ON SAFE_CAST(l.peya_order_id AS INT64) = h.order_code
+
+  LEFT JOIN order_casuistics c
+    ON SAFE_CAST(l.peya_order_id AS INT64) = c.order_code
+
+  WHERE l.country_code = 'cl'
+    AND l.peya_order_id IS NOT NULL
+    AND SAFE_CAST(l.vendor.vendor_code AS INT64) IS NOT NULL
+    AND l.is_preorder = FALSE
+    AND REGEXP_REPLACE(
+          LOWER(TRIM(IFNULL(l.vendor.vertical_type, ''))),
+          r'[\s-]+',
+          '_'
+        ) != 'courier_business'
+
+    AND (
+      DATE(l.created_date_local)
+        BETWEEN b.week_1_start AND b.week_1_end
+
+      OR DATE(l.created_date_local)
+        BETWEEN b.week_8_start AND b.week_8_end
+    )
+),
+
+
+-- ============================================================
+-- 6. METADATA DEL VENDOR
+-- Prioriza metadata observada durante la última semana.
+-- Esto asegura una sola fila final por vendor_code.
+-- ============================================================
+
+vendor_metadata AS (
+
+  SELECT
+    vendor_code,
+
+    ARRAY_AGG(
+      STRUCT(
+        vendor_name,
+        franchise_id,
+        franchise_name,
+        grade,
+        vertical_type,
+        main_cuisine,
+        city
+      )
+
+      ORDER BY
+        IF(week_number = 1, 1, 0) DESC,
+        created_at_local DESC
+
+      LIMIT 1
+    )[OFFSET(0)] AS metadata
+
+  FROM order_level
+
+  GROUP BY
+    vendor_code
+),
+
+
+-- ============================================================
+-- 7. MÉTRICAS POR VENDOR
+-- El tiempo FIR compara dos TIMESTAMP en UTC:
+-- food_is_ready_at - created_at.
+-- Los valores negativos se excluyen del promedio.
+-- FIR share = órdenes con food_is_ready_at / órdenes totales.
+-- Como el numerador es subconjunto del denominador, siempre queda entre 0 y 1.
+-- ============================================================
+
+vendor_metrics AS (
+
+  SELECT
+    vendor_code,
+
+    COUNT(
+      DISTINCT IF(
+        week_number = 1,
+        peya_order_id,
+        NULL
+      )
+    ) AS orders_1w,
+
+    COUNT(
+      DISTINCT IF(
+        week_number = 8,
+        peya_order_id,
+        NULL
+      )
+    ) AS orders_8w,
+
+    COUNT(
+      DISTINCT IF(
+        week_number = 1
+        AND has_fir,
+        peya_order_id,
+        NULL
+      )
+    ) AS orders_with_fir_1w,
+
+    -- Buckets AWT de la última semana usando CEIL:
+    -- NULL -> null, 0 -> 0, 0.2 -> 1, 1.2 -> 2, etc.
+    COUNT(
+      DISTINCT IF(
+        week_number = 1
+        AND awt_minutes IS NULL,
+        peya_order_id,
+        NULL
+      )
+    ) AS awt_null_orders_1w,
+
+    COUNT(
+      DISTINCT IF(
+        week_number = 1
+        AND CEIL(awt_minutes) = 0,
+        peya_order_id,
+        NULL
+      )
+    ) AS awt_0min_orders_1w,
+
+    COUNT(
+      DISTINCT IF(
+        week_number = 1
+        AND CEIL(awt_minutes) BETWEEN 1 AND 3,
+        peya_order_id,
+        NULL
+      )
+    ) AS awt_1_3min_orders_1w,
+
+    COUNT(
+      DISTINCT IF(
+        week_number = 1
+        AND CEIL(awt_minutes) >= 4,
+        peya_order_id,
+        NULL
+      )
+    ) AS awt_4plus_orders_1w,
+
+    AVG(
+      IF(
+        week_number = 1,
+        ept_without_hdm_minutes,
+        NULL
+      )
+    ) AS ept_without_hdm_1w,
+
+    AVG(
+      IF(
+        week_number = 8,
+        ept_without_hdm_minutes,
+        NULL
+      )
+    ) AS ept_without_hdm_8w,
+
+    AVG(
+      IF(
+        week_number = 1,
+        awt_minutes,
+        NULL
+      )
+    ) AS awt_1w,
+
+    AVG(
+      IF(
+        week_number = 8,
+        awt_minutes,
+        NULL
+      )
+    ) AS awt_8w,
+
+    SUM(
+      IF(
+        week_number = 1,
+        highpreptime_orders,
+        0.0
+      )
+    ) AS highpreptime_orders_1w,
+
+    SUM(
+      IF(
+        week_number = 8,
+        highpreptime_orders,
+        0.0
+      )
+    ) AS highpreptime_orders_8w,
+
+    SUM(
+      IF(
+        week_number = 1,
+        awt10_orders,
+        0.0
+      )
+    ) AS awt10_orders_1w,
+
+    SUM(
+      IF(
+        week_number = 8,
+        awt10_orders,
+        0.0
+      )
+    ) AS awt10_orders_8w,
+
+    AVG(
+      IF(
+        week_number = 1,
+        fir_minutes,
+        NULL
+      )
+    ) AS fir_1w
+
+  FROM order_level
+
+  GROUP BY
+    vendor_code
+),
+
+
+vendor_summary AS (
+
+  SELECT
+    vm.vendor_code,
+
+    md.metadata.vendor_name AS vendor_name,
+    md.metadata.franchise_id AS franchise_id,
+    md.metadata.franchise_name AS franchise_name,
+    md.metadata.grade AS grade,
+    md.metadata.vertical_type AS vertical_type,
+    md.metadata.main_cuisine AS main_cuisine,
+    md.metadata.city AS city,
+
+    -- Los vendors sin franquicia se tratan individualmente.
+    COALESCE(
+      CAST(md.metadata.franchise_id AS STRING),
+      CONCAT('NO_FRANCHISE_', vm.vendor_code)
+    ) AS franchise_key,
+
+    vm.orders_1w,
+    vm.orders_8w,
+    vm.orders_with_fir_1w,
+
+    vm.ept_without_hdm_1w,
+    vm.ept_without_hdm_8w,
+    vm.awt_1w,
+    vm.awt_8w,
+    vm.fir_1w,
+
+    SAFE_DIVIDE(
+      vm.highpreptime_orders_1w,
+      vm.orders_1w
+    ) AS highpreptime_1w_pct,
+
+    SAFE_DIVIDE(
+      vm.highpreptime_orders_8w,
+      vm.orders_8w
+    ) AS highpreptime_8w_pct,
+
+    SAFE_DIVIDE(
+      vm.awt10_orders_1w,
+      vm.orders_1w
+    ) AS awt10_1w_pct,
+
+    SAFE_DIVIDE(
+      vm.awt10_orders_8w,
+      vm.orders_8w
+    ) AS awt10_8w_pct,
+
+    SAFE_DIVIDE(
+      vm.awt_null_orders_1w,
+      vm.orders_1w
+    ) AS awt_null_1w_pct,
+
+    SAFE_DIVIDE(
+      vm.awt_0min_orders_1w,
+      vm.orders_1w
+    ) AS awt_0min_1w_pct,
+
+    SAFE_DIVIDE(
+      vm.awt_1_3min_orders_1w,
+      vm.orders_1w
+    ) AS awt_1_3min_1w_pct,
+
+    SAFE_DIVIDE(
+      vm.awt_4plus_orders_1w,
+      vm.orders_1w
+    ) AS awt_4plus_1w_pct,
+
+    SAFE_DIVIDE(
+      vm.orders_with_fir_1w,
+      vm.orders_1w
+    ) AS fir_share_1w
+
+  FROM vendor_metrics vm
+
+  INNER JOIN vendor_metadata md
+    USING (vendor_code)
+
+  -- Resultado final: vendors con órdenes durante la última semana.
+  WHERE vm.orders_1w > 0
+    AND REGEXP_REPLACE(
+          LOWER(TRIM(IFNULL(md.metadata.vertical_type, ''))),
+          r'[\s-]+',
+          '_'
+        ) != 'courier_business'
+),
+
+
+-- ============================================================
+-- 8. FIR PROMEDIO POR VERTICAL_TYPE Y CUISINE
+-- Es un promedio por orden de la última semana. AVG ignora las
+-- órdenes sin FIR y fir_minutes ya excluye duraciones negativas.
+-- Las llaves se normalizan para evitar separar categorías por
+-- diferencias de mayúsculas, espacios o guiones.
+-- ============================================================
+
+vertical_cuisine_fir AS (
+
+  SELECT
+    REGEXP_REPLACE(
+      LOWER(TRIM(IFNULL(vertical_type, ''))),
+      r'[\s-]+',
+      '_'
+    ) AS vertical_type_key,
+
+    REGEXP_REPLACE(
+      LOWER(TRIM(IFNULL(main_cuisine, ''))),
+      r'\s+',
+      ' '
+    ) AS main_cuisine_key,
+
+    AVG(fir_minutes) AS fir_vertical_cuisine_1w
+
+  FROM order_level
+
+  WHERE week_number = 1
+
+  GROUP BY
+    1,
+    2
+),
+
+
+-- ============================================================
+-- 9. VENDOR MEDIANA DE CADA FRANQUICIA
+-- Se obtiene el p50 no ponderado de los EPT de los vendors.
+-- Luego se selecciona el vendor real más cercano a ese p50.
+-- ============================================================
+
+franchise_candidates AS (
+
+  SELECT
+    *,
+
+    PERCENTILE_CONT(
+      ept_without_hdm_1w,
+      0.5
+    ) OVER (
+      PARTITION BY franchise_key
+    ) AS franchise_p50_ept_1w
+
+  FROM vendor_summary
+
+  WHERE ept_without_hdm_1w IS NOT NULL
+),
+
+
+franchise_median_vendor AS (
+
+  SELECT
+    franchise_key,
+
+    vendor_code AS franchise_median_vendor_code,
+    vendor_name AS franchise_median_vendor_name,
+
+    ept_without_hdm_1w
+      AS franchise_median_vendor_ept_1w
+
+  FROM franchise_candidates
+
+  QUALIFY ROW_NUMBER() OVER (
+
+    PARTITION BY franchise_key
+
+    ORDER BY
+      ABS(
+        ept_without_hdm_1w
+        - franchise_p50_ept_1w
+      ),
+
+      ept_without_hdm_1w,
+      vendor_code
+
+  ) = 1
+),
+
+
+-- ============================================================
+-- 10. VENDOR MEDIANA DE CADA COMBINACIÓN FRANQUICIA-GRADE
+-- Replica la lógica anterior, pero calcula el p50 dentro de cada
+-- combinación de franquicia y grade.
+-- ============================================================
+
+franchise_grade_candidates AS (
+
+  SELECT
+    *,
+
+    PERCENTILE_CONT(
+      ept_without_hdm_1w,
+      0.5
+    ) OVER (
+      PARTITION BY franchise_key, grade
+    ) AS franchise_grade_p50_ept_1w
+
+  FROM vendor_summary
+
+  WHERE ept_without_hdm_1w IS NOT NULL
+),
+
+
+franchise_grade_median_vendor AS (
+
+  SELECT
+    franchise_key,
+    grade,
+
+    vendor_code AS franchise_grade_median_vendor_code,
+    vendor_name AS franchise_grade_median_vendor_name,
+
+    ept_without_hdm_1w
+      AS franchise_grade_median_vendor_ept_1w
+
+  FROM franchise_grade_candidates
+
+  QUALIFY ROW_NUMBER() OVER (
+
+    PARTITION BY franchise_key, grade
+
+    ORDER BY
+      ABS(
+        ept_without_hdm_1w
+        - franchise_grade_p50_ept_1w
+      ),
+
+      ept_without_hdm_1w,
+      vendor_code
+
+  ) = 1
+),
+
+
+-- ============================================================
+-- 11. INPUTS DE LOS CINCO CRITERIOS DE REDUCCIÓN
+-- Cada candidato representa un EPT objetivo, no una cantidad a restar.
+-- Todos tienen un piso de 1 minuto.
+-- ============================================================
+
+modification_inputs AS (
+
+  SELECT
+    s.vendor_code,
+    s.ept_without_hdm_1w,
+
+    -- 1. EPT observado ocho semanas atrás.
+    GREATEST(
+      1.0,
+      s.ept_without_hdm_8w
+    ) AS candidate_ept_8w,
+
+    -- 2. FIR del vendor, únicamente con adopción FIR >= 60 %.
+    CASE
+      WHEN s.fir_share_1w >= 0.6
+        AND s.fir_1w IS NOT NULL
+      THEN GREATEST(
+        1.0,
+        s.fir_1w
+      )
+    END AS candidate_fir_1w,
+
+    -- 3. Vendor mediana de su combinación franchise-grade.
+    GREATEST(
+      1.0,
+      mg.franchise_grade_median_vendor_ept_1w
+    ) AS candidate_franchise_grade,
+
+    -- 4. FIR promedio vertical-cuisine, únicamente si
+    -- high preptime de la última semana es >= 10 %.
+    CASE
+      WHEN s.highpreptime_1w_pct >= 0.1
+        AND vc.fir_vertical_cuisine_1w IS NOT NULL
+      THEN GREATEST(
+        1.0,
+        vc.fir_vertical_cuisine_1w
+      )
+    END AS candidate_highpreptime,
+
+    -- 5. Reducción basada en AWT0, únicamente si AWT0 >= 40 %.
+    CASE
+      WHEN s.awt_0min_1w_pct < 0.4
+        OR s.awt_0min_1w_pct IS NULL
+        OR s.ept_without_hdm_1w IS NULL
+      THEN NULL
+
+      WHEN s.ept_without_hdm_1w <= 20
+      THEN GREATEST(
+        1.0,
+        s.ept_without_hdm_1w - 5.0
+      )
+
+      WHEN s.awt_0min_1w_pct < 0.6
+      THEN GREATEST(
+        1.0,
+        0.7 * s.ept_without_hdm_1w
+      )
+
+      WHEN s.awt_0min_1w_pct < 0.75
+      THEN GREATEST(
+        1.0,
+        0.65 * s.ept_without_hdm_1w
+      )
+
+      ELSE GREATEST( -- < 1.00
+        1.0,
+        0.6 * s.ept_without_hdm_1w
+      )
+    END AS awt_reduction_variable
+
+  FROM vendor_summary s
+
+  LEFT JOIN franchise_grade_median_vendor mg
+    ON s.franchise_key = mg.franchise_key
+    AND s.grade = mg.grade
+
+  LEFT JOIN vertical_cuisine_fir vc
+    ON REGEXP_REPLACE(
+         LOWER(TRIM(IFNULL(s.vertical_type, ''))),
+         r'[\s-]+',
+         '_'
+       ) = vc.vertical_type_key
+    AND REGEXP_REPLACE(
+          LOWER(TRIM(IFNULL(s.main_cuisine, ''))),
+          r'\s+',
+          ' '
+        ) = vc.main_cuisine_key
+),
+
+
+-- ============================================================
+-- 12. GANADOR DE LA MODIFICACIÓN
+-- Se descartan NULL y valores que no reduzcan el EPT actual.
+-- Si hay empate, priority conserva un resultado determinístico.
+-- ============================================================
+
+modification_selection AS (
+
+  SELECT
+    mi.vendor_code,
+    mi.awt_reduction_variable,
+
+    (
+      SELECT AS STRUCT
+        candidate.ept_value,
+        candidate.flag
+
+      FROM UNNEST([
+        STRUCT<ept_value FLOAT64, flag STRING, priority INT64>(
+          mi.candidate_ept_8w,
+          'EPT 8w ago',
+          1
+        ),
+
+        STRUCT<ept_value FLOAT64, flag STRING, priority INT64>(
+          mi.candidate_fir_1w,
+          'FIR last week',
+          2
+        ),
+
+        STRUCT<ept_value FLOAT64, flag STRING, priority INT64>(
+          mi.candidate_franchise_grade,
+          'Median Franchise-Grade',
+          3
+        ),
+
+        STRUCT<ept_value FLOAT64, flag STRING, priority INT64>(
+          mi.candidate_highpreptime,
+          'High preptime | FIR vertical-cuisine',
+          4
+        ),
+
+        STRUCT<ept_value FLOAT64, flag STRING, priority INT64>(
+          mi.awt_reduction_variable,
+          'AWT0 reduction',
+          5
+        )
+      ]) AS candidate
+
+      WHERE candidate.ept_value IS NOT NULL
+        AND candidate.ept_value < mi.ept_without_hdm_1w
+
+      ORDER BY
+        candidate.ept_value,
+        candidate.priority
+
+      LIMIT 1
+    ) AS selected_modification
+
+  FROM modification_inputs mi
+)
+
+
+-- ============================================================
+-- 13. RESULTADO FINAL
+-- ============================================================
+
+SELECT
+  b.week_1_start,
+  b.week_1_end,
+  b.week_8_start,
+  b.week_8_end,
+
+  s.vendor_code,
+  s.vendor_name,
+  s.franchise_name,
+  s.grade,
+  s.vertical_type,
+  s.main_cuisine,
+  s.city,
+
+  ROUND(
+    s.ept_without_hdm_1w,
+    2
+  ) AS ept_without_hdm_1w,
+
+  ROUND(
+    s.ept_without_hdm_8w,
+    2
+  ) AS ept_without_hdm_8w,
+
+  ROUND(
+    s.awt_1w,
+    2
+  ) AS awt_1w,
+
+  ROUND(
+    s.awt_8w,
+    2
+  ) AS awt_8w,
+
+  ROUND(
+    s.highpreptime_1w_pct,
+    4
+  ) AS highpreptime_1w_pct,
+
+  ROUND(
+    s.highpreptime_8w_pct,
+    4
+  ) AS highpreptime_8w_pct,
+
+  ROUND(
+    s.awt10_1w_pct,
+    4
+  ) AS awt10_1w_pct,
+
+  ROUND(
+    s.awt10_8w_pct,
+    4
+  ) AS awt10_8w_pct,
+
+  ROUND(
+    s.awt_null_1w_pct,
+    4
+  ) AS awt_null_1w_pct,
+
+  ROUND(
+    s.awt_0min_1w_pct,
+    4
+  ) AS awt_0min_1w_pct,
+
+  ROUND(
+    s.awt_1_3min_1w_pct,
+    4
+  ) AS awt_1_3min_1w_pct,
+
+  ROUND(
+    s.awt_4plus_1w_pct,
+    4
+  ) AS awt_4plus_1w_pct,
+
+  ROUND(
+    s.ept_without_hdm_1w
+    - s.ept_without_hdm_8w,
+    2
+  ) AS ept_diff_1w_vs_8w,
+
+  ROUND(
+    SAFE_DIVIDE(
+      s.ept_without_hdm_1w
+        - s.ept_without_hdm_8w,
+      s.ept_without_hdm_8w
+    ),
+    4
+  ) AS ept_diff_pct_1w_vs_8w,
+
+  ROUND(
+    s.fir_1w,
+    2
+  ) AS fir_1w,
+
+  ROUND(
+    vc.fir_vertical_cuisine_1w,
+    2
+  ) AS fir_vertical_cuisine_1w,
+
+  ROUND(
+    s.fir_share_1w,
+    4
+  ) AS fir_share_1w_pct,
+
+  ROUND(
+    IF(
+      s.fir_share_1w >= 0.6,
+      s.ept_without_hdm_1w - s.fir_1w,
+      NULL
+    ),
+    2
+  ) AS ept_minus_fir_1w,
+
+  ROUND(
+    IF(
+      s.fir_share_1w >= 0.6,
+      SAFE_DIVIDE(
+        s.ept_without_hdm_1w - s.fir_1w,
+        s.fir_1w
+      ),
+      NULL
+    ),
+    4
+  ) AS ept_minus_fir_1w_pct,
+
+  m.franchise_median_vendor_code,
+  m.franchise_median_vendor_name,
+
+  ROUND(
+    m.franchise_median_vendor_ept_1w,
+    2
+  ) AS franchise_median_vendor_ept_1w,
+
+  mg.franchise_grade_median_vendor_code,
+  mg.franchise_grade_median_vendor_name,
+
+  ROUND(
+    mg.franchise_grade_median_vendor_ept_1w,
+    2
+  ) AS franchise_grade_median_vendor_ept_1w,
+
+  ROUND(
+    s.ept_without_hdm_1w
+      - mg.franchise_grade_median_vendor_ept_1w,
+    2
+  ) AS ept_minus_franchise_grade_median_1w,
+
+  ROUND(
+    ms.awt_reduction_variable,
+    2
+  ) AS awt_reduction_variable,
+
+  ROUND(
+    COALESCE(
+      ms.selected_modification.ept_value,
+      GREATEST(
+        1.0,
+        s.ept_without_hdm_1w
+      )
+    ),
+    2
+  ) AS selected_min_ept,
+
+  COALESCE(
+    ms.selected_modification.flag,
+    'No modification'
+  ) AS selected_min_flag,
+
+  -- Columnas útiles para auditar las bases.
+  s.orders_1w,
+  s.orders_8w,
+  s.orders_with_fir_1w
+
+FROM vendor_summary s
+
+CROSS JOIN date_bounds b
+
+LEFT JOIN franchise_median_vendor m
+  USING (franchise_key)
+
+LEFT JOIN franchise_grade_median_vendor mg
+  ON s.franchise_key = mg.franchise_key
+  AND s.grade = mg.grade
+
+LEFT JOIN modification_selection ms
+  ON s.vendor_code = ms.vendor_code
+
+LEFT JOIN vertical_cuisine_fir vc
+  ON REGEXP_REPLACE(
+       LOWER(TRIM(IFNULL(s.vertical_type, ''))),
+       r'[\s-]+',
+       '_'
+     ) = vc.vertical_type_key
+  AND REGEXP_REPLACE(
+        LOWER(TRIM(IFNULL(s.main_cuisine, ''))),
+        r'\s+',
+        ' '
+      ) = vc.main_cuisine_key;

@@ -1,0 +1,371 @@
+WITH hdm AS (
+  SELECT
+    SAFE_CAST(order_code AS INT64) AS order_code,
+
+    high_demand_mode.is_hd_order AS hd_order,
+    SAFE_CAST(high_demand_mode.minutes_added AS FLOAT64) AS minutes_added,
+    SAFE_CAST(high_demand_mode.duration AS FLOAT64) AS duration,
+    high_demand_mode.enabled_at,
+    DATETIME(high_demand_mode.enabled_at, "America/Santiago") AS enabled_at_local,
+    high_demand_mode.disabled_at
+
+  FROM `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_orders` o
+  WHERE TRUE
+    AND created_date BETWEEN '2026-06-22'
+                        AND '2026-06-28'
+    AND country_code = "cl"
+    AND high_demand_mode.is_hd_order IS TRUE
+    AND requested_pickup_at IS NULL
+),
+
+base AS (
+  SELECT
+    l.peya_order_id,
+    l.vendor.vendor_code AS vendor_code,
+    COALESCE(p.partner_name, l.vendor.name) AS store_name,
+    l.city.city_name AS city_name,
+
+    p.franchise.franchise_id AS franchise_id,
+    p.franchise.franchise_name AS franchise_name,
+
+    l.food_is_ready_at,
+    l.vendor.vertical_type,
+    CASE
+      WHEN l.food_is_ready_at IS NOT NULL
+      THEN TIMESTAMP_DIFF(
+        l.food_is_ready_at,
+        TIMESTAMP(l.created_at_local, "America/Santiago"),
+        SECOND
+      )
+    END AS fir_seconds,
+
+    DATE(l.created_date_local) AS order_date,
+    EXTRACT(DAYOFWEEK FROM DATE(l.created_date_local)) AS day_of_week_num,
+    FORMAT_DATE('%A', DATE(l.created_date_local)) AS day_of_week_name,
+
+    CASE
+      WHEN EXTRACT(HOUR FROM l.created_at_local) BETWEEN 12 AND 14 THEN 'lunch'
+      WHEN EXTRACT(HOUR FROM l.created_at_local) BETWEEN 19 AND 21 THEN 'dinner'
+      ELSE 'valle'
+    END AS time_block,
+
+    SAFE_DIVIDE(l.estimated_prep_time, 60) AS ept_min,
+    SAFE_DIVIDE(l.timings.avoidable_wait_time, 60) AS awt_min,
+
+    TIMESTAMP_DIFF(d.rider_picked_up_at_local, l.created_at_local, MINUTE) AS created_to_pickup,
+
+    o.is_slow_order AS slow,
+    o.non_seamless_order AS non_seamless,
+
+    h.order_code AS hd_order_code,
+    h.minutes_added AS hd_minutes_added,
+    h.duration AS hd_duration,
+    h.enabled_at AS hd_enabled_at,
+    h.enabled_at_local AS hd_enabled_at_local,
+    h.disabled_at AS hd_disabled_at
+
+  FROM `peya-bi-tools-pro.il_logistics.fact_logistic_orders` l
+  LEFT JOIN UNNEST(l.deliveries) d
+  LEFT JOIN `peya-bi-tools-pro.il_core.dim_partner` p
+    ON l.vendor.vendor_code = CAST(p.partner_id AS STRING)
+  LEFT JOIN `peya-datamarts-pro.dm_fulfillment.non_seamless_delivery_order_level` o
+    ON o.platform_order_code = l.peya_order_id
+  LEFT JOIN hdm h
+    ON h.order_code = SAFE_CAST(l.peya_order_id AS INT64)
+
+  WHERE l.country_code = 'cl'
+    AND l.vendor.vertical_type = 'restaurants'
+    AND p.is_online = TRUE
+    AND l.is_preorder = FALSE
+    
+    AND l.created_date_local BETWEEN '2026-06-22'
+                                AND '2026-06-28'
+),
+
+zero_food_ready_franchises AS (
+  SELECT
+    franchise_id,
+    franchise_name,
+    COUNT(DISTINCT peya_order_id) AS franchise_orders,
+    COUNT(DISTINCT vendor_code) AS franchise_stores,
+    COUNT(DISTINCT IF(food_is_ready_at IS NOT NULL, peya_order_id, NULL)) AS franchise_orders_with_fir,
+    SAFE_DIVIDE(
+      COUNT(DISTINCT IF(food_is_ready_at IS NOT NULL, peya_order_id, NULL)),
+      COUNT(DISTINCT peya_order_id)
+    ) AS franchise_fir
+  FROM base
+  GROUP BY
+    franchise_id,
+    franchise_name
+  -- HAVING franchise_orders >= 1
+),
+
+valid_stores AS (
+  SELECT
+    b.franchise_id,
+    b.franchise_name,
+    b.city_name,
+    b.vertical_type,
+
+    z.franchise_orders,
+    z.franchise_stores,
+    z.franchise_orders_with_fir,
+    z.franchise_fir,
+
+    b.vendor_code,
+    b.store_name,
+
+    COUNT(DISTINCT b.peya_order_id) AS store_orders_total,
+    COUNT(DISTINCT IF(b.food_is_ready_at IS NOT NULL, b.peya_order_id, NULL)) AS store_orders_with_fir,
+    SAFE_DIVIDE(
+      COUNT(DISTINCT IF(b.food_is_ready_at IS NOT NULL, b.peya_order_id, NULL)),
+      COUNT(DISTINCT b.peya_order_id)
+    ) AS store_fir
+
+  FROM base b
+  INNER JOIN zero_food_ready_franchises z
+    ON b.franchise_id = z.franchise_id
+  GROUP BY
+    b.franchise_id,
+    b.franchise_name,
+    b.city_name,
+    b.vertical_type,
+    z.franchise_orders,
+    z.franchise_stores,
+    z.franchise_orders_with_fir,
+    z.franchise_fir,
+    b.vendor_code,
+    b.store_name
+  -- HAVING store_orders_total >= 1
+),
+
+store_day_block_metrics AS (
+  SELECT
+    b.franchise_id,
+    b.vendor_code,
+    b.city_name,
+    b.vertical_type,
+
+    b.day_of_week_num,
+    b.day_of_week_name,
+    b.time_block,
+
+    SUM(b.fir_seconds) AS sum_fir_seconds,
+    ROUND(SAFE_DIVIDE(SUM(b.fir_seconds), 60), 2) AS sum_fir_min,
+    ROUND(SAFE_DIVIDE(AVG(b.fir_seconds), 60), 2) AS avg_fir_min,
+
+    COUNT(DISTINCT b.peya_order_id) AS total_orders,
+    COUNT(DISTINCT IF(b.slow = 1, b.peya_order_id, NULL)) AS slow_orders,
+    COUNT(DISTINCT IF(b.non_seamless = TRUE, b.peya_order_id, NULL)) AS non_seamless_orders,
+
+    COUNT(DISTINCT IF(b.food_is_ready_at IS NOT NULL, b.peya_order_id, NULL)) AS orders_with_fir,
+    SAFE_DIVIDE(
+      COUNT(DISTINCT IF(b.food_is_ready_at IS NOT NULL, b.peya_order_id, NULL)),
+      COUNT(DISTINCT b.peya_order_id)
+    ) AS fir,
+
+    ROUND(AVG(b.ept_min), 2) AS ept,
+    ROUND(AVG(b.awt_min), 2) AS awt,
+    ROUND(AVG(b.ept_min) + AVG(b.awt_min), 2) AS tt,
+    ROUND(AVG(b.created_to_pickup), 2) AS ctp
+
+  FROM base b
+  INNER JOIN valid_stores s
+    ON b.franchise_id = s.franchise_id
+   AND b.vendor_code = s.vendor_code
+   AND b.city_name = s.city_name
+   AND b.vertical_type = s.vertical_type
+
+  GROUP BY
+    b.franchise_id,
+    b.vendor_code,
+    b.city_name,
+    b.vertical_type,
+    b.day_of_week_num,
+    b.day_of_week_name,
+    b.time_block
+
+  -- HAVING total_orders > 1
+),
+
+hdm_order_metrics AS (
+  SELECT
+    franchise_id,
+    vendor_code,
+    city_name,
+    vertical_type,
+
+    day_of_week_num,
+    day_of_week_name,
+    time_block,
+
+    COUNT(DISTINCT peya_order_id) AS hd_total_orders,
+    ROUND(SUM(hd_minutes_added), 2) AS hd_total_minutes_added
+
+  FROM (
+    SELECT
+      franchise_id,
+      vendor_code,
+      city_name,
+      vertical_type,
+
+      day_of_week_num,
+      day_of_week_name,
+      time_block,
+
+      peya_order_id,
+      MAX(COALESCE(hd_minutes_added, 0)) AS hd_minutes_added
+
+    FROM base
+    WHERE hd_order_code IS NOT NULL
+    GROUP BY
+      franchise_id,
+      vendor_code,
+      city_name,
+      vertical_type,
+      day_of_week_num,
+      day_of_week_name,
+      time_block,
+      peya_order_id
+  )
+
+  GROUP BY
+    franchise_id,
+    vendor_code,
+    city_name,
+    vertical_type,
+    day_of_week_num,
+    day_of_week_name,
+    time_block
+),
+
+hdm_trigger_metrics AS (
+  SELECT
+    franchise_id,
+    vendor_code,
+    city_name,
+    vertical_type,
+
+    day_of_week_num,
+    day_of_week_name,
+    time_block,
+
+    COUNT(*) AS started_triggers,
+    ROUND(AVG(duration), 2) AS avg_trigger_duration_min
+
+  FROM (
+    SELECT
+      franchise_id,
+      vendor_code,
+      city_name,
+      vertical_type,
+
+      EXTRACT(DAYOFWEEK FROM DATE(hd_enabled_at_local)) AS day_of_week_num,
+      FORMAT_DATE('%A', DATE(hd_enabled_at_local)) AS day_of_week_name,
+
+      CASE
+        WHEN EXTRACT(HOUR FROM hd_enabled_at_local) BETWEEN 12 AND 14 THEN 'lunch'
+        WHEN EXTRACT(HOUR FROM hd_enabled_at_local) BETWEEN 19 AND 21 THEN 'dinner'
+        ELSE 'valle'
+      END AS time_block,
+
+      hd_enabled_at,
+      MAX(hd_duration) AS duration
+
+    FROM base
+    WHERE hd_enabled_at IS NOT NULL
+    GROUP BY
+      franchise_id,
+      vendor_code,
+      city_name,
+      vertical_type,
+      day_of_week_num,
+      day_of_week_name,
+      time_block,
+      hd_enabled_at
+  )
+
+  GROUP BY
+    franchise_id,
+    vendor_code,
+    city_name,
+    vertical_type,
+    day_of_week_num,
+    day_of_week_name,
+    time_block
+)
+
+SELECT
+  s.franchise_id,
+  s.franchise_name,
+  s.city_name,
+  s.vertical_type,
+
+  s.franchise_orders,
+  s.franchise_stores,
+  s.franchise_orders_with_fir,
+  ROUND(s.franchise_fir, 4) AS franchise_fir,
+
+  s.vendor_code,
+  s.store_name,
+  s.store_orders_total,
+  s.store_orders_with_fir,
+  ROUND(s.store_fir, 4) AS store_fir,
+
+  m.day_of_week_num,
+  m.day_of_week_name,
+  m.time_block,
+
+  m.total_orders,
+  m.slow_orders,
+  m.non_seamless_orders,
+
+  COALESCE(hdo.hd_total_orders, 0) AS hd_total_orders,
+  COALESCE(hdo.hd_total_minutes_added, 0) AS hd_total_minutes_added,
+  COALESCE(hdt.started_triggers, 0) AS started_triggers,
+  hdt.avg_trigger_duration_min,
+
+  m.orders_with_fir,
+  ROUND(m.fir, 4) AS fir_ratio,
+
+  m.ept,
+  m.awt,
+  m.tt,
+  m.ctp,
+  m.avg_fir_min as fir
+
+  -- m.sum_fir_seconds,
+  -- m.sum_fir_min,
+
+FROM valid_stores s
+INNER JOIN store_day_block_metrics m
+  ON s.franchise_id = m.franchise_id
+ AND s.vendor_code = m.vendor_code
+ AND s.city_name = m.city_name
+ AND s.vertical_type = m.vertical_type
+
+LEFT JOIN hdm_order_metrics hdo
+  ON s.franchise_id = hdo.franchise_id
+ AND s.vendor_code = hdo.vendor_code
+ AND s.city_name = hdo.city_name
+ AND s.vertical_type = hdo.vertical_type
+ AND m.day_of_week_num = hdo.day_of_week_num
+ AND m.time_block = hdo.time_block
+
+LEFT JOIN hdm_trigger_metrics hdt
+  ON s.franchise_id = hdt.franchise_id
+ AND s.vendor_code = hdt.vendor_code
+ AND s.city_name = hdt.city_name
+ AND s.vertical_type = hdt.vertical_type
+ AND m.day_of_week_num = hdt.day_of_week_num
+ AND m.time_block = hdt.time_block
+
+ORDER BY
+  s.franchise_name,
+  s.store_name,
+  m.day_of_week_num,
+  CASE m.time_block
+    WHEN 'lunch' THEN 1
+    WHEN 'dinner' THEN 2
+    WHEN 'valle' THEN 3
+  END

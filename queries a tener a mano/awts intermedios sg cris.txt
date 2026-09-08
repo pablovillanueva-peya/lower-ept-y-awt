@@ -1,0 +1,140 @@
+--insert `peya-chile.user_cristian_alvarez.simulacion_niu` 
+
+WITH time_series AS (
+  /* Generación de serie temporal:
+     - Inicio: 7 días antes del objetivo a las 00:00
+     - Fin: Fecha específica definida por el usuario a las 00:00:00
+     - Intervalo: 10 minutos
+  */
+  SELECT 
+    datetime(timestamp_val,"America/Santiago") datetime_ref 
+  FROM 
+    UNNEST(GENERATE_TIMESTAMP_ARRAY(
+      TIMESTAMP_SUB(TIMESTAMP('2025-05-25 03:00:00'), INTERVAL 1 DAY), -- Inicio (7 días antes del fin)
+      TIMESTAMP('2025-05-30 02:50:00'),                               -- Fin fijo a las 0:00
+      INTERVAL 1 MINUTE
+    )) AS timestamp_val
+)
+
+
+,hdm as ( 
+  SELECT   safe_cast(order_code as int64) order_code, country_code, created_date, estimated_pickup_at,requested_pickup_at, case when requested_pickup_at is not null then True else False end as ajuste_ept, high_demand_mode.is_hd_order as hd_order , high_demand_mode.author ,high_demand_mode.minutes_added , high_demand_mode.duration 
+FROM `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_orders` o 
+where true
+and created_date >= "2026-01-01"
+and country_code ="cl"
+)
+
+--##data full 
+,tab as ( 
+select 
+l.peya_order_id 
+,l.vendor.vendor_code 
+,l.vendor.name vendor_name 
+,l.vendor_accepted_at_local
+,l.sent_to_vendor_at_local stv_local 
+,l.original_scheduled_pickup_at_local committed_pu 
+,d.delivery_id 
+,datetime(t.created_at,"America/Santiago") transition_at  
+,t.state   
+,lead(t.state) over(partition by l.peya_order_id, d.delivery_id order by t.created_at asc) next_state 
+,lead(datetime(t.created_at,"America/Santiago")) over(partition by l.peya_order_id, d.delivery_id order by t.created_at asc) next_transition_at 
+,t.rider_id transition_rider 
+,d.rider_picked_up_at_local 
+,l.estimated_prep_time/60 ept
+,l.timings.avoidable_wait_time/60 awt 
+,p.franchise.franchise_name 
+,hdm.minutes_added 
+,l.created_at_local 
+,datetime_diff(l.food_is_ready_at, l.sent_to_vendor_at, second)/60 fir_minutes
+from `peya-bi-tools-pro.il_logistics.fact_logistic_orders` l 
+left join unnest(l.deliveries) d
+left join unnest(d.transitions) t
+left join `peya-bi-tools-pro.il_core.dim_partner` p on p.partner_id = safe_cast(l.vendor.vendor_code as int64)
+left join hdm on l.peya_order_id = hdm.order_code 
+where l.country_code ="cl"
+and l.created_date_local between "2025-04-01" and "2025-05-30"
+and l.peya_order_id is not null 
+--and l.vendor.vertical_type ="restaurants"
+and d.is_returning = FALSE
+and p.franchise.franchise_name in ("Doggis","Dominó")
+order by l.peya_order_id, d.delivery_id, t.created_at 
+)
+
+--##todas las veces que tuvimos rider_near_restaurant 
+,rnpu as ( 
+select *
+ from tab 
+ where state ="near_pickup"
+ --and vendor_code ="493918" --vendor de test
+order by peya_order_id, delivery_id, transition_at asc 
+)
+
+--select * from rnpu
+
+--##todas las ordenes en proceso que se pickearon 
+,qord as ( 
+select distinct peya_order_id, vendor_code, stv_local,vendor_accepted_at_local vendor_accepted, rider_picked_up_at_local rider_pu ,  ept ,awt , minutes_added hdm 
+from tab 
+where stv_local is not null 
+and rider_picked_up_at_local is not null 
+and vendor_accepted_at_local is not null 
+) 
+
+
+--select * from qord 
+,basefull as (
+select * from time_series cross join (select distinct vendor_code, vendor_name from tab where true)
+)
+
+--select * from basefull 
+
+--##tab hour date vendor real metrics 
+,metrics as (
+select date(created_at_local) date_local, extract(hour from created_at_local) hour_local,  vendor_code
+, count(distinct peya_order_id ) orders 
+, sum(awt) awt_sum 
+, count(distinct case when awt is not null then peya_order_id end) base_awt 
+, count(distinct case when fir_minutes is not null then peya_order_id end) orders_w_fir 
+from ( 
+  select distinct created_at_local, peya_order_id, vendor_code, awt, fir_minutes 
+  from tab
+  ) 
+group by all 
+)
+
+
+
+--select * from basefull where datetime_ref= "2026-02-15T14:00:00"
+--##calculos 
+,calc as ( 
+select format_date("%A", date(datetime_ref)) dayofweek,   basefull.* 
+, count(distinct qord.peya_order_id) queued_orders 
+, count(distinct rnpu.transition_rider) riders_near_pu  
+, avg(case when basefull.datetime_ref > rnpu.committed_pu then datetime_diff(basefull.datetime_ref,greatest(rnpu.committed_pu,rnpu.transition_at ),second)/60  else null end)
+avg_waiting_time 
+,avg(qord.ept) avg_ept_queued_orders 
+,avg(qord.awt) avg_awt_queued_orders 
+,avg(ifnull(qord.hdm,0)) avg_hdm_global_queued_orders 
+,avg(qord.hdm) avg_hdm_trigger_queued_orders 
+from basefull 
+left join qord on qord.vendor_code = basefull.vendor_code and qord.vendor_accepted <= basefull.datetime_ref and qord.rider_pu > basefull.datetime_ref --##sin retirar aun al momento de la referencia   
+left join rnpu on rnpu.vendor_code = basefull.vendor_code and rnpu.transition_at <= basefull.datetime_ref and rnpu.next_transition_at > basefull.datetime_ref --##sin reasignar o pickear al momento de la referencia
+--and rnpu.committed_pu < basefull.datetime_ref --##committed_pu anterior a la referencia 
+group by all 
+order by datetime_ref asc 
+)
+
+
+
+select extract(hour from datetime_ref) hour, date(datetime_ref) date, calc.* , metrics.base_awt, metrics.awt_sum, metrics.orders, metrics.orders_w_fir 
+from calc 
+left join metrics on calc.vendor_code = metrics.vendor_code and extract(hour from calc.datetime_ref) = metrics.hour_local and date(calc.datetime_ref)= metrics.date_local
+where true 
+order by vendor_code, date, hour asc 
+--and vendor_code = "141233"
+
+---## revision de casos por dudas 
+--##select * from tab where datetime("2026-02-15T14:00:00") between transition_at and next_transition_at  and vendor_code = "546340"
+
+

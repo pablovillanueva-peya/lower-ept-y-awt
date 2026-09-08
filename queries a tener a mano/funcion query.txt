@@ -1,0 +1,52 @@
+REDUCT_DATE_COL = "start_date"
+REDUCT_FRANCHISE_COL = "franchise_name"
+REDUCT_VENDOR_COL = "vendor_code"
+REDUCT_WAVE_COL = "wave"
+
+reduct_base = reduction.copy()
+
+required_cols = [
+    REDUCT_WAVE_COL,
+    REDUCT_DATE_COL,
+    REDUCT_FRANCHISE_COL,
+    REDUCT_VENDOR_COL
+]
+missing_cols = [
+    col for col in required_cols
+    if col not in reduct_base.columns
+]
+
+if missing_cols:
+    raise ValueError(
+        f"Faltan columnas en reduction: {missing_cols}"
+    )
+
+reduct_base[REDUCT_DATE_COL] = pd.to_datetime(
+    reduct_base[REDUCT_DATE_COL],
+    errors="coerce"
+).dt.date
+
+for col in [
+    REDUCT_WAVE_COL,
+    REDUCT_FRANCHISE_COL,
+    REDUCT_VENDOR_COL
+]:
+    reduct_base[col] = (
+        reduct_base[col].astype(str).str.strip()
+    )
+
+# W9, Week32, etc. se conservan exactamente como vienen en reduction.
+wave_config_preview = (
+    reduct_base[required_cols]
+    .drop_duplicates()
+    .sort_values(
+        [REDUCT_DATE_COL, REDUCT_WAVE_COL, REDUCT_FRANCHISE_COL]
+    )
+)
+# display(wave_config_preview)
+
+query = build_vendor_pre_post_query(
+    reduct_base,
+    max_days=14
+)
+print(query)

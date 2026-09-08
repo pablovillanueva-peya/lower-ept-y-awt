@@ -1,0 +1,947 @@
+-- FORMER 2026-06-22 blocked periods stores
+
+WITH params AS (
+
+  SELECT
+    DATE '2026-07-11' AS target_start_date,
+    DATE '2026-07-12' AS target_end_date,
+    4 AS history_weeks,
+    -- 381713 AS target_partner_id
+
+),
+
+
+-- ============================================================
+-- 0. LÍMITES TEMPORALES
+-- target_end_ts es exclusivo: incluye completo el 24 de junio.
+-- ============================================================
+
+bounds AS (
+
+  SELECT
+    *,
+
+    TIMESTAMP(
+      target_start_date
+    ) AS target_start_ts,
+
+    TIMESTAMP(
+      DATE_ADD(target_end_date, INTERVAL 1 DAY)
+    ) AS target_end_ts,
+
+    TIMESTAMP(
+      DATE_SUB(target_start_date, INTERVAL 28 DAY)
+    ) AS history_start_ts
+
+  FROM params
+
+),
+
+
+-- ============================================================
+-- 1. TODOS LOS TRIGGERS
+-- Se usan para saber cuándo realmente no había ningún bloqueo
+-- en las cuatro semanas históricas.
+-- ============================================================
+
+raw_all_triggers AS (
+
+  SELECT
+    SAFE_CAST(d.partner_id AS INT64) AS partner_id,
+
+    d.notes,
+    d.country_id,
+    d.category_name,
+    d.action,
+    d.reviewed,
+
+    d.from_date,
+    d.to_date
+
+  FROM `peya-bi-tools-pro.il_core.dim_partner_schedule_variation` d
+
+  CROSS JOIN bounds b
+
+  WHERE d.country_id = 2
+    -- AND SAFE_CAST(d.partner_id AS INT64) = b.target_partner_id         # <---- filtro store
+
+    AND d.from_date IS NOT NULL
+    AND d.to_date IS NOT NULL
+
+    /*
+      Trae cualquier trigger que intercepte el período necesario:
+      desde cuatro semanas antes hasta el final del análisis.
+    */
+    AND d.to_date > b.history_start_ts
+    AND d.from_date < b.target_end_ts
+
+),
+
+
+-- ============================================================
+-- 2. CONSOLIDAR TODOS LOS TRIGGERS
+-- Estos bloques se usarán solamente para identificar free time.
+-- ============================================================
+
+all_ordered_triggers AS (
+
+  SELECT
+    *,
+
+    MAX(to_date) OVER (
+      PARTITION BY partner_id
+      ORDER BY from_date, to_date
+      ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+    ) AS max_previous_to_date
+
+  FROM raw_all_triggers
+
+),
+
+
+all_marked_triggers AS (
+
+  SELECT
+    *,
+
+    CASE
+      WHEN max_previous_to_date IS NULL THEN 1
+      WHEN from_date > max_previous_to_date THEN 1
+      ELSE 0
+    END AS starts_new_block
+
+  FROM all_ordered_triggers
+
+),
+
+
+all_trigger_groups AS (
+
+  SELECT
+    *,
+
+    SUM(starts_new_block) OVER (
+      PARTITION BY partner_id
+      ORDER BY from_date, to_date
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS block_group
+
+  FROM all_marked_triggers
+
+),
+
+
+blocked_periods_all AS (
+
+  SELECT
+    partner_id,
+    block_group,
+
+    MIN(from_date) AS from_date,
+    MAX(to_date) AS to_date,
+
+    DATETIME(
+      MIN(from_date)
+    ) AS from_date_local,
+
+    DATETIME(
+      MAX(to_date)
+    ) AS to_date_local,
+
+    COUNT(*) AS source_trigger_count
+
+  FROM all_trigger_groups
+
+  GROUP BY
+    partner_id,
+    block_group
+
+),
+
+
+-- ============================================================
+-- 3. TRIGGERS GRADE DEL PERÍODO OBJETIVO
+-- Solo estos aparecerán como cierres a evaluar.
+-- Se recortan a los límites del período.
+-- ============================================================
+
+target_grade_triggers AS (
+
+  SELECT
+    t.partner_id,
+
+    CASE
+      WHEN LOWER(COALESCE(t.notes, '')) LIKE '%v2%' THEN 'v2'
+      WHEN LOWER(COALESCE(t.notes, '')) LIKE '%v1%' THEN 'v1'
+      ELSE t.notes
+    END AS trigger_type,
+
+    t.country_id,
+    t.category_name,
+    t.action,
+    t.reviewed,
+
+    GREATEST(
+      t.from_date,
+      b.target_start_ts
+    ) AS from_date,
+
+    LEAST(
+      t.to_date,
+      b.target_end_ts
+    ) AS to_date
+
+  FROM raw_all_triggers t
+
+  CROSS JOIN bounds b
+
+  WHERE LOWER(COALESCE(t.notes, '')) LIKE '%grade%'
+
+    -- El trigger intercepta el período objetivo.
+    AND t.from_date < b.target_end_ts
+    AND t.to_date > b.target_start_ts
+
+),
+
+
+-- ============================================================
+-- 4. CREAR TODOS LOS PUNTOS DE CORTE
+--
+-- Ejemplo:
+-- v1: 04:00–06:00
+-- v2: 05:00–07:00
+--
+-- Puntos: 04:00, 05:00, 06:00, 07:00
+-- ============================================================
+
+target_grade_boundaries AS (
+
+  SELECT
+    partner_id,
+    from_date AS boundary_ts
+
+  FROM target_grade_triggers
+
+  UNION DISTINCT
+
+  SELECT
+    partner_id,
+    to_date AS boundary_ts
+
+  FROM target_grade_triggers
+
+),
+
+
+target_atomic_intervals_base AS (
+
+  SELECT
+    partner_id,
+
+    boundary_ts AS from_date,
+
+    LEAD(boundary_ts) OVER (
+      PARTITION BY partner_id
+      ORDER BY boundary_ts
+    ) AS to_date
+
+  FROM target_grade_boundaries
+
+),
+
+
+-- ============================================================
+-- 5. ASIGNAR CADA INTERVALO A v1 O v2
+-- Si existe al menos un v2 activo, el intervalo completo es v2.
+-- ============================================================
+
+target_atomic_intervals AS (
+
+  SELECT
+    a.partner_id,
+    a.from_date,
+    a.to_date,
+
+    CASE
+      WHEN COUNTIF(t.trigger_type = 'v2') > 0 THEN 'v2'
+      ELSE 'v1'
+    END AS trigger_type
+
+  FROM target_atomic_intervals_base a
+
+  INNER JOIN target_grade_triggers t
+    ON t.partner_id = a.partner_id
+    AND t.from_date < a.to_date
+    AND t.to_date > a.from_date
+
+  WHERE a.to_date IS NOT NULL
+    AND a.from_date < a.to_date
+
+  GROUP BY
+    a.partner_id,
+    a.from_date,
+    a.to_date
+
+),
+
+
+-- ============================================================
+-- 6. VOLVER A UNIR INTERVALOS CONTIGUOS DEL MISMO TIPO
+-- ============================================================
+
+target_atomic_ordered AS (
+
+  SELECT
+    *,
+
+    LAG(to_date) OVER (
+      PARTITION BY partner_id
+      ORDER BY from_date, to_date
+    ) AS previous_to_date,
+
+    LAG(trigger_type) OVER (
+      PARTITION BY partner_id
+      ORDER BY from_date, to_date
+    ) AS previous_trigger_type
+
+  FROM target_atomic_intervals
+
+),
+
+
+target_atomic_marked AS (
+
+  SELECT
+    *,
+
+    CASE
+      WHEN previous_to_date IS NULL THEN 1
+      WHEN from_date != previous_to_date THEN 1
+      WHEN trigger_type != previous_trigger_type THEN 1
+      ELSE 0
+    END AS starts_new_segment
+
+  FROM target_atomic_ordered
+
+),
+
+
+target_atomic_grouped AS (
+
+  SELECT
+    *,
+
+    SUM(starts_new_segment) OVER (
+      PARTITION BY partner_id
+      ORDER BY from_date, to_date
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS segment_group
+
+  FROM target_atomic_marked
+
+),
+
+
+target_segments AS (
+
+  SELECT
+    partner_id,
+    segment_group,
+    trigger_type,
+
+    MIN(from_date) AS from_date,
+    MAX(to_date) AS to_date
+
+  FROM target_atomic_grouped
+
+  GROUP BY
+    partner_id,
+    segment_group,
+    trigger_type
+
+),
+
+
+-- ============================================================
+-- 7. METADATA DE LOS TRIGGERS QUE ORIGINARON CADA SEGMENTO
+-- Solo se consideran triggers del tipo finalmente asignado.
+-- ============================================================
+
+target_segment_metadata AS (
+
+  SELECT
+    s.partner_id,
+    s.segment_group,
+    s.trigger_type,
+
+    s.from_date,
+    s.to_date,
+
+    COUNT(t.partner_id) AS source_trigger_count,
+
+    ANY_VALUE(t.country_id) AS country_id,
+
+    STRING_AGG(
+      DISTINCT t.category_name,
+      ' | '
+      ORDER BY t.category_name
+    ) AS category_name,
+
+    STRING_AGG(
+      DISTINCT t.action,
+      ' | '
+      ORDER BY t.action
+    ) AS action,
+
+    LOGICAL_OR(
+      COALESCE(t.reviewed, FALSE)
+    ) AS any_reviewed
+
+  FROM target_segments s
+
+  LEFT JOIN target_grade_triggers t
+    ON t.partner_id = s.partner_id
+    AND t.trigger_type = s.trigger_type
+    AND t.from_date < s.to_date
+    AND t.to_date > s.from_date
+
+  GROUP BY
+    s.partner_id,
+    s.segment_group,
+    s.trigger_type,
+    s.from_date,
+    s.to_date
+
+),
+
+
+-- ============================================================
+-- 8. CIERRES DEL PERÍODO OBJETIVO
+--
+-- notes queda solamente como:
+-- v1
+-- v2
+-- ============================================================
+
+closures AS (
+
+  SELECT
+    ROW_NUMBER() OVER (
+      ORDER BY partner_id, from_date, to_date
+    ) AS closure_id,
+
+    DATE(
+      from_date
+    ) AS date,
+
+    EXTRACT(
+      DAYOFWEEK
+      FROM DATETIME(
+        from_date,
+        'America/Santiago'
+      )
+    ) AS day_of_week,
+
+    partner_id,
+
+    trigger_type AS notes,
+
+    country_id,
+    category_name,
+    action,
+    any_reviewed,
+
+    source_trigger_count,
+
+    from_date,
+    to_date,
+
+    DATETIME(
+      from_date
+    ) AS from_date_local,
+
+    DATETIME(
+      to_date
+    ) AS to_date_local,
+
+    TIMESTAMP_DIFF(
+      to_date,
+      from_date,
+      SECOND
+    ) / 60.0 AS duration_minutes
+
+  FROM target_segment_metadata
+
+),
+
+
+-- ============================================================
+-- 9. VENTANAS EQUIVALENTES DE LAS CUATRO SEMANAS ANTERIORES
+-- ============================================================
+
+historical_windows AS (
+
+  SELECT
+    c.closure_id,
+    c.partner_id,
+
+    weeks_ago,
+
+    c.duration_minutes AS target_window_minutes,
+
+    DATETIME_SUB(
+      c.from_date_local,
+      INTERVAL weeks_ago WEEK
+    ) AS historical_from,
+
+    DATETIME_SUB(
+      c.to_date_local,
+      INTERVAL weeks_ago WEEK
+    ) AS historical_to
+
+  FROM closures c
+
+  CROSS JOIN params p
+
+  CROSS JOIN UNNEST(
+    GENERATE_ARRAY(1, p.history_weeks)
+  ) AS weeks_ago
+
+),
+
+
+-- ============================================================
+-- 10. BLOQUEOS HISTÓRICOS
+-- AQUÍ SE USAN TODOS LOS TRIGGERS, NO SOLO LOS GRADE.
+-- ============================================================
+
+historical_blocked_time AS (
+
+  SELECT
+    hw.closure_id,
+    hw.weeks_ago,
+
+    SUM(
+      DATETIME_DIFF(
+        LEAST(
+          hw.historical_to,
+          b.to_date_local
+        ),
+        GREATEST(
+          hw.historical_from,
+          b.from_date_local
+        ),
+        SECOND
+      )
+    ) / 60.0 AS blocked_minutes
+
+  FROM historical_windows hw
+
+  INNER JOIN blocked_periods_all b
+    ON b.partner_id = hw.partner_id
+    AND b.from_date_local < hw.historical_to
+    AND b.to_date_local > hw.historical_from
+
+  GROUP BY
+    hw.closure_id,
+    hw.weeks_ago
+
+),
+
+
+historical_exposure AS (
+
+  SELECT
+    hw.closure_id,
+    hw.partner_id,
+    hw.weeks_ago,
+
+    hw.historical_from,
+    hw.historical_to,
+
+    hw.target_window_minutes,
+
+    LEAST(
+      hw.target_window_minutes,
+      COALESCE(hbt.blocked_minutes, 0)
+    ) AS blocked_minutes,
+
+    GREATEST(
+      hw.target_window_minutes
+        - COALESCE(hbt.blocked_minutes, 0),
+      0
+    ) AS free_minutes
+
+  FROM historical_windows hw
+
+  LEFT JOIN historical_blocked_time hbt
+    ON hbt.closure_id = hw.closure_id
+    AND hbt.weeks_ago = hw.weeks_ago
+
+),
+
+
+-- ============================================================
+-- 11. ÓRDENES HISTÓRICAS
+-- ============================================================
+
+historical_bounds AS (
+
+  SELECT
+    DATE(MIN(historical_from)) AS min_date,
+    DATE(MAX(historical_to)) AS max_date
+
+  FROM historical_windows
+
+),
+
+
+orders AS (
+
+  SELECT
+    l.peya_order_id,
+
+    SAFE_CAST(
+      l.vendor.vendor_code AS INT64
+    ) AS partner_id,
+
+    l.created_at_local
+
+  FROM `peya-bi-tools-pro.il_logistics.fact_logistic_orders` l
+
+  CROSS JOIN historical_bounds hb
+
+  WHERE l.country_code = 'cl'
+    AND l.peya_order_id IS NOT NULL
+    AND l.vendor.vertical_type = 'restaurants'
+
+    -- AND SAFE_CAST(
+    --   l.vendor.vendor_code AS INT64
+    -- ) = 381713
+
+    AND l.created_date_local BETWEEN
+      hb.min_date
+      AND hb.max_date
+
+),
+
+
+-- ============================================================
+-- 12. EXCLUIR ÓRDENES DE CUALQUIER PERÍODO BLOQUEADO
+-- ============================================================
+
+free_period_orders AS (
+
+  SELECT
+    o.*
+
+  FROM orders o
+
+  WHERE NOT EXISTS (
+
+    SELECT
+      1
+
+    FROM blocked_periods_all b
+
+    WHERE b.partner_id = o.partner_id
+
+      AND o.created_at_local >= b.from_date_local
+      AND o.created_at_local < b.to_date_local
+
+  )
+
+),
+
+
+-- ============================================================
+-- 13. ÓRDENES Y EXPOSICIÓN POR SEMANA
+-- ============================================================
+
+orders_by_historical_week AS (
+
+  SELECT
+    he.closure_id,
+    he.weeks_ago,
+
+    he.target_window_minutes,
+    he.blocked_minutes,
+    he.free_minutes,
+
+    COUNT(
+      DISTINCT o.peya_order_id
+    ) AS observed_orders_free_period
+
+  FROM historical_exposure he
+
+  LEFT JOIN free_period_orders o
+    ON o.partner_id = he.partner_id
+    AND o.created_at_local >= he.historical_from
+    AND o.created_at_local < he.historical_to
+
+  GROUP BY
+    he.closure_id,
+    he.weeks_ago,
+    he.target_window_minutes,
+    he.blocked_minutes,
+    he.free_minutes
+
+),
+
+
+historical_week_metrics AS (
+
+  SELECT
+    *,
+
+    SAFE_DIVIDE(
+      observed_orders_free_period,
+      free_minutes
+    ) AS orders_per_free_minute
+
+  FROM orders_by_historical_week
+
+),
+
+
+-- ============================================================
+-- 14. PROMEDIO HISTÓRICO FINAL
+-- ============================================================
+
+historical_average AS (
+
+  SELECT
+    closure_id,
+
+    COUNTIF(
+      free_minutes > 0
+    ) AS weeks_with_free_time,
+
+    SUM(
+      observed_orders_free_period
+    ) AS observed_orders_free_last_4_weeks,
+
+    ROUND(
+      SUM(blocked_minutes),
+      2
+    ) AS blocked_minutes_last_4_weeks,
+
+    ROUND(
+      SUM(free_minutes),
+      2
+    ) AS free_minutes_last_4_weeks,
+
+    ROUND(
+      SAFE_DIVIDE(
+        SUM(free_minutes),
+        SUM(target_window_minutes)
+      ) * 100,
+      2
+    ) AS historical_free_coverage_pct,
+
+    ROUND(
+      SAFE_DIVIDE(
+        SUM(observed_orders_free_period),
+        SUM(free_minutes)
+      ) * MAX(target_window_minutes),
+      2
+    ) AS avg_orders_last_4_weeks_free_periods
+
+  FROM historical_week_metrics
+
+  GROUP BY closure_id
+
+),
+
+
+-- ============================================================
+-- 15. GRADE DEL VENDOR
+-- ============================================================
+
+vendor_grades AS (
+
+  SELECT
+    SAFE_CAST(v.vendor_code AS INT64) AS vendor_code,
+    ve.vendor_monitor.vendor_grade AS grade
+
+  FROM `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendors` v
+
+  LEFT JOIN UNNEST(v.vendor) AS ve
+
+  LEFT JOIN `fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_attributes_latest` latest
+    ON latest.vendor_code = v.vendor_code
+
+  WHERE v.entity_id = 'PY_CL'
+    AND latest.entity_id = 'PY_CL'
+    AND ve.is_latest
+    AND ve.is_active
+    AND latest.vendor_code IS NOT NULL
+
+    -- AND SAFE_CAST(v.vendor_code AS INT64) = 381713
+
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY SAFE_CAST(v.vendor_code AS INT64)
+    ORDER BY DATE(ve.vendor_monitor.last_updated_at) DESC
+  ) = 1
+
+),
+
+
+-- ============================================================
+-- 16. ÓRDENES REALES DEL VENDOR POR FECHA
+-- ============================================================
+
+closure_date_bounds AS (
+
+  SELECT
+    MIN(date) AS min_date,
+    MAX(date) AS max_date
+
+  FROM closures
+
+),
+
+
+orders_by_vendor_date AS (
+
+  SELECT
+    SAFE_CAST(
+      l.vendor.vendor_code AS INT64
+    ) AS partner_id,
+
+    DATE(l.created_date_local) AS date,
+
+    COUNT(
+      DISTINCT l.peya_order_id
+    ) AS orders_vendor_date,
+
+    COUNT(
+      DISTINCT l.peya_order_id
+    )
+    -
+    COUNT(
+      DISTINCT IF(
+        ns.non_seamless_order = TRUE,
+        l.peya_order_id,
+        NULL
+      )
+    ) AS orders_vendor_date_seamless
+
+  FROM `peya-bi-tools-pro.il_logistics.fact_logistic_orders` l
+
+  CROSS JOIN closure_date_bounds b
+
+  LEFT JOIN `peya-datamarts-pro.dm_fulfillment.non_seamless_delivery_order_level` ns
+    ON ns.platform_order_code = l.peya_order_id
+
+  WHERE l.country_code = 'cl'
+    AND l.vendor.vertical_type = 'restaurants'
+    AND l.peya_order_id IS NOT NULL
+
+    AND DATE(l.created_date_local) BETWEEN
+      b.min_date
+      AND b.max_date
+
+    -- AND SAFE_CAST(
+    --   l.vendor.vendor_code AS INT64
+    -- ) = 381713
+
+  GROUP BY
+    partner_id,
+    date
+
+)
+
+
+-- ============================================================
+-- 17. RESULTADO FINAL
+-- ============================================================
+
+SELECT
+  c.closure_id,
+  c.date,
+  c.day_of_week,
+
+  CASE c.day_of_week
+    WHEN 1 THEN 'Domingo'
+    WHEN 2 THEN 'Lunes'
+    WHEN 3 THEN 'Martes'
+    WHEN 4 THEN 'Miércoles'
+    WHEN 5 THEN 'Jueves'
+    WHEN 6 THEN 'Viernes'
+    WHEN 7 THEN 'Sábado'
+  END AS day_of_week_name,
+
+  c.partner_id,
+
+  p.partner_name AS vendor_name,
+  p.franchise.franchise_name AS franchise_name,
+
+  vg.grade,
+
+  c.notes,
+
+  c.category_name,
+  c.action,
+  c.any_reviewed,
+  c.source_trigger_count,
+
+  c.from_date_local,
+  c.to_date_local,
+  c.duration_minutes,
+
+  COALESCE(
+    h.weeks_with_free_time,
+    0
+  ) AS weeks_with_free_time,
+
+  COALESCE(
+    h.observed_orders_free_last_4_weeks,
+    0
+  ) AS observed_orders_free_last_4_weeks,
+
+  COALESCE(
+    h.blocked_minutes_last_4_weeks,
+    0
+  ) AS blocked_minutes_last_4_weeks,
+
+  COALESCE(
+    h.free_minutes_last_4_weeks,
+    0
+  ) AS free_minutes_last_4_weeks,
+
+  COALESCE(
+    h.historical_free_coverage_pct,
+    0
+  ) AS historical_free_coverage_pct,
+
+  h.avg_orders_last_4_weeks_free_periods,
+
+  COALESCE(
+    ovd.orders_vendor_date,
+    0
+  ) AS orders_vendor_date,
+
+  COALESCE(
+    ovd.orders_vendor_date_seamless,
+    0
+  ) AS orders_vendor_date_seamless
+
+FROM closures c
+
+LEFT JOIN historical_average h
+  ON h.closure_id = c.closure_id
+
+LEFT JOIN `peya-bi-tools-pro.il_core.dim_partner` p
+  ON SAFE_CAST(p.partner_id AS INT64) = c.partner_id
+
+LEFT JOIN vendor_grades vg
+  ON vg.vendor_code = c.partner_id
+
+LEFT JOIN orders_by_vendor_date ovd
+  ON ovd.partner_id = c.partner_id
+  AND ovd.date = c.date
+
+ORDER BY
+  c.from_date_local,
+  c.to_date_local
