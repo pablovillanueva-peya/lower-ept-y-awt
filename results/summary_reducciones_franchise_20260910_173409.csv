@@ -1,0 +1,6 @@
+franchise_group_id,franchise_id,franchise_name,vertical_type,vendors_exported,vendors_affected,vendors_reduced,vendors_increased,vendors_unchanged,vendors_without_history,orders_7d,ept_old,ept_new,reduction_min,reduction_pct,ept_new_tes,reduction_tes_min,estimated_minutes_reduced_7d,awt_old,slow_share,non_seamless_share
+0016900002xQv80AAC,0016900002xQv80AAC,Club Del Poke - LATAM,restaurants,1,1,0,1,0,0,93.0,13.3553,16.7379,-3.3826,-0.2533,15.957,-2.6017,-241.96,11.6838,0.1183,0.3226
+VENDOR_286542,,Independent / Mi Delizie Sur Sushi,restaurants,1,1,1,0,0,0,701.0,31.9497,20.7754,11.1743,0.3497,20.0,11.9497,8376.77,1.7734,0.3937,0.4151
+VENDOR_418988,,Independent / Nori & Nigiri,restaurants,1,1,1,0,0,0,85.0,36.7054,22.3254,14.38,0.3918,21.9529,14.7525,1253.96,4.6588,0.2824,0.3765
+VENDOR_229581,,Independent / Sushi Camba Antofagasta Norte,restaurants,1,1,1,0,0,0,59.0,38.2888,26.5773,11.7115,0.3059,26.0,12.2888,725.04,5.0637,0.339,0.4237
+0011r00002VoHw6AAF,0011r00002VoHw6AAF,Papa John's,restaurants,3,3,3,0,0,0,1798.0,32.8896,20.3602,12.5294,0.381,19.9549,12.9346,23256.46,3.1944,0.2264,0.2725

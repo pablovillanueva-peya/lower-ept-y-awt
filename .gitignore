@@ -1,0 +1,27 @@
+# Local Python environments
+.venv/
+venv/
+env/
+
+# Python-generated files
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.cache/trigger_comparison/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+application_default_credentials.json
+client_secret*.json
+credentials*.json
+service-account*.json
+service_account*.json
+token*.json
+*.pem
+*.key
+
+# Local tooling
+.vscode/
+.idea/
