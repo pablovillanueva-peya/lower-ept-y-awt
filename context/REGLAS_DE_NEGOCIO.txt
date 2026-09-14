@@ -1,0 +1,529 @@
+PEDIDOSYA CHILE — REGLAS DE NEGOCIO Y CONTEXTO PARA CODEX
+Fecha de consolidación: 2026-09-10
+Idioma de trabajo: español. SQL: BigQuery / GoogleSQL. Análisis: Python.
+
+PROPÓSITO Y CÓMO USAR ESTE ARCHIVO
+
+Lee este documento antes de modificar queries, notebooks, exportaciones o lógica
+de EPT, HDM y cierres. Resume acuerdos de trabajo; no es una exportación de la
+configuración productiva ni reemplaza el schema o las queries del repositorio.
+
+Estados usados:
+- ACUERDO: decisión explícita o criterio consolidado en conversaciones.
+- IMPLEMENTACIÓN RECUPERADA: comportamiento encontrado en una versión de archivo;
+  verificar que corresponda a la versión del repositorio antes de reproducirlo.
+- HISTÓRICO / ESPECÍFICO: ejemplo o filtro de un análisis particular.
+- POR VERIFICAR: falta una definición exacta o hay versiones contradictorias.
+
+Las instrucciones actuales de Pablo pueden actualizar estas reglas. Si el código
+y este documento difieren, describe la diferencia: no la resuelvas silenciosamente
+ni conviertas una versión histórica en una política vigente. Conserva la lógica
+existente cuando la tarea no pida cambiarla. No inventes tablas, columnas,
+denominadores, umbrales ni mecanismos de negocio que no estén documentados.
+
+1. OBJETIVO DEL PROYECTO Y UNIDAD DE ANÁLISIS
+
+- Reducir tiempos de pickup y TT mediante ajustes de EPT, monitoreando AWT,
+  high preptimes, AWT10, seamless/non_seamless y partner_performance.
+- Evaluar por separado la actividad de HDM/cierres y su efecto en las órdenes.
+- El contexto principal es Chile. En fuentes compartidas de vendors se usa
+  entity_id = 'PY_CL'; en otras fuentes, revisar el campo y valor correctos.
+- vendor_code identifica la tienda en los cruces que venimos usando. No asumir
+  que todas las tablas exponen ese nombre, ni que equivale directamente a
+  vendor_id o partner_id sin revisar el mapeo.
+- Cadenas/franquicias se identifican por franchise_id, no solo por su nombre.
+- grade es una dimensión del análisis; revisar de dónde se obtiene antes de usarla.
+- Excluir courier_business en los análisis EPT y comparaciones CL donde se acordó
+  esa exclusión. Mantener el mismo universo en numerador y denominador.
+- No convertir un filtro puntual de restaurants en una regla para todo el proyecto.
+
+2. CÓMO SE CONFIGURAN LOS TRIGGERS DE HDM Y CIERRE
+
+2.1 Estado de saturación
+
+ACUERDO: la saturación de una tienda se caracteriza por tres componentes:
+  a) queued orders: cantidad de órdenes en cola.
+  b) riders near pickup / couriers waiting: cantidad de riders cerca del pickup.
+  c) máximo AWT de los riders, expresado en minutos enteros completados.
+
+IMPLEMENTACIÓN RECUPERADA de los análisis de estados:
+  affected = queued_orders >= X
+             AND riders_near_pu >= Y
+             AND max_awt_completed_minutes >= Z
+
+  healthy = queued_orders < X
+            OR riders_near_pu < Y
+            OR max_awt_completed_minutes < Z
+
+Los tres umbrales de una regla se cumplen conjuntamente (AND). No reemplazarlo
+por OR. La lógica anterior presupone componentes conocidos: no convertir un NULL
+automáticamente en healthy o en cero sin revisar cómo lo trata la fuente.
+
+El máximo AWT entero se ha calculado como DIV(max_awt_seconds, 60).
+Ejemplo: 4 minutos y 59 segundos son 4 minutos completados; no redondear a 5.
+Los nombres anteriores son los recuperados de análisis de estados: verificar
+sus rutas y aliases en la query concreta.
+
+2.2 Elementos de configuración
+
+Una regla se define mediante:
+- Alcance: determinados grades, determinadas franchises o una regla abierta/global.
+- Condición: umbrales de queued orders, riders y máximo AWT.
+- Acción: añadir minutos al EPT mediante HDM, o activar un cierre.
+- Para HDM: cantidad de minutos a añadir.
+- Duración: tiempo durante el cual permanece activa la acción.
+- Para cierres: posibilidad de apertura, identificada mediante reviewed.
+
+No hay en este documento una cantidad universal de minutos HDM ni una duración
+universal. Esos valores se leen de la configuración concreta.
+Tampoco se ha confirmado aquí que una regla por franchise tenga prioridad sobre
+una regla por grade o global por el solo hecho de ser más específica.
+
+Ejemplo HISTÓRICO de cambio de umbrales analizado para NIU:
+                       Minimum AWT | Couriers Waiting | Queued Orders
+  Antes, regla 1:           4       |        1         |       2
+  Antes, regla 2:           4       |        1         |       4
+  Antes, regla 3:           4       |        2         |       6
+  Después, regla 1:         4       |        1         |       1
+  Después, regla 2:         4       |        1         |       2
+  Después, regla 3:         4       |        1         |       3
+
+Cada fila representa una condición. Este ejemplo no especifica los minutos HDM,
+la duración ni el alcance de cada regla, y no es un default para otras cadenas.
+
+2.3 Prioridad cuando se solapan triggers
+
+ACUERDO, orden de prioridad:
+  1) Cierre SIN posibilidad de apertura.
+  2) Cierre CON posibilidad de apertura.
+  3) HDM.
+
+Dentro de un mismo nivel de prioridad, tiene prioridad el trigger que empezó
+antes. No aplicar la antigüedad por encima de la prioridad de tipo de cierre/HDM.
+
+reviewed = TRUE  -> cierre con posibilidad de apertura.
+reviewed = FALSE -> cierre sin posibilidad de apertura.
+
+Derivar esta distinción de reviewed, no de notes. El nombre reviewed no debe
+interpretarse simplemente como "alguien revisó la fila".
+No asignar un tipo a reviewed NULL sin una regla explícita.
+
+Los nombres v1/v2 se usaron históricamente, pero YA NO se usan para presentar ni
+definir estos tipos. Usar descripciones de apertura y el campo reviewed.
+
+POR VERIFICAR en la fuente antes de implementar: empates exactos de inicio,
+reapertura efectiva, reactivación, extensión/reinicio de duración y tratamiento
+de varios HDM simultáneos. No asumir que sus minutos se suman ni que gana el
+HDM con más minutos.
+
+2.4 Activación, vigencia y efecto son cosas distintas
+
+- Para saber CUÁNDO se activó HDM se necesitan los registros/eventos de triggers.
+  Los minutos HDM de las órdenes sirven para medir efecto/cobertura, pero no
+  sustituyen el registro de activaciones.
+- Un trigger puede estar configurado, activarse, tener un intervalo de vigencia
+  y ser desplazado por uno de mayor prioridad. Distinguir esas situaciones.
+- Al reconstruir actividad efectiva, resolver solapamientos según la prioridad.
+- Los periodos ininterrumpidos de cierre se usan en el dashboard de actividad.
+  Evitar duplicar duración u órdenes al cruzar intervalos solapados.
+- #activaciones no es #órdenes con HDM. Usar la identidad del evento según la fuente.
+- Las órdenes que habrían entrado durante un cierre son una ESTIMACIÓN
+  contrafactual de la query correspondiente, no órdenes observadas o canceladas.
+- La ruta exacta de la tabla de eventos HDM no quedó verificada en este resumen.
+  Buscarla en el schema y en las queries de triggers del repositorio.
+
+3. REDUCCIONES DE EPT
+
+3.1 Significado y candidatos
+
+- Diferenciar EPT base/sin HDM de los minutos añadidos por HDM. La comparación
+  histórica de EPT para reducciones usa EPT sin HDM.
+- Los candidatos son valores OBJETIVO de EPT, no cantidades a restar.
+- Candidatos/flags trabajados:
+    EPT 8w ago
+    FIR last week
+    Median Franchise-Grade
+    High preptime | FIR vertical-cuisine
+    AWT0 reduction
+- Manual adjustment es un flag adicional de ajustes manuales; no es uno de los
+  cinco candidatos automáticos anteriores.
+- FIR last week exige adopción FIR >= 60%. No confundir el share de uso de FIR
+  con el valor de tiempo que se usa como candidato.
+- High preptime | FIR vertical-cuisine exige highpreptime_1w_pct >= 10%.
+- ACUERDO explícito: la reducción debe ser de AL MENOS 5 minutos, inclusive:
+    ept_actual_sin_hdm - ept_objetivo >= 5.0
+  No basta con que ept_objetivo < ept_actual.
+- Candidatos NULL no califican. Si ninguno califica, no forzar una reducción;
+  se ha utilizado el resultado 'No modification'.
+- Conservar la selección del ganador y su prioridad determinística de la query
+  vigente. No inventar qué flag gana un empate ni ordenar por texto del flag.
+
+IMPLEMENTACIÓN RECUPERADA de mediana:
+- PERCENTILE_CONT(..., 0.5), sin ponderar por órdenes.
+- Se selecciona el vendor real más cercano al p50 como referencia.
+- Se han calculado referencias por franchise_key y por (franchise_key, grade).
+  Revisar población, columna de EPT y desempates en la query vigente.
+
+3.2 Parámetros AWT0 y piso de EPT: HAY VERSIONES EN CONFLICTO
+
+No elegir automáticamente una de estas políticas al editar el repositorio.
+
+Versión recuperada de vendor_ept_fir_weekly(5).txt, 17-ago-2026:
+  elegibilidad AWT0 >= 60%;
+  si EPT < 10: objetivo = EPT - 5;
+  en otro caso:
+    AWT0 < 70%: objetivo = EPT * 0.80;
+    AWT0 < 80%: objetivo = EPT * 0.75;
+    AWT0 >= 80%: objetivo = EPT * 0.70;
+  piso encontrado en ese archivo: 1 minuto.
+
+Versión recuperada de vendor_ept_fir_weekly_corrected.txt, modificada 3-sep-2026:
+  elegibilidad AWT0 >= 40%;
+  si EPT <= 20: objetivo = EPT - 5;
+  en otro caso:
+    AWT0 < 60%: objetivo = EPT * 0.70;
+    AWT0 < 75%: objetivo = EPT * 0.65;
+    AWT0 >= 75%: objetivo = EPT * 0.60;
+  piso encontrado en ese archivo: 1 minuto.
+
+En el resumen de acuerdos anteriores también figura un piso de 5 minutos.
+La fecha de modificación de un archivo no prueba aprobación de su política.
+Por tanto, umbral AWT0, corte de EPT, multiplicadores y piso requieren resolver
+la versión activa con la configuración/código del repositorio. No mezclar
+parámetros de versiones distintas. La condición de reducción >= 5 minutos es
+un acuerdo explícito que debe verificarse aparte del cálculo del candidato.
+
+3.3 Otras condiciones y semántica de aplicación
+
+- Excluir courier_business en el flujo de reducciones correspondiente.
+- Se ha trabajado con el resguardo de no aplicar si partner_performance aumenta
+  >= 1 punto porcentual. POR VERIFICAR: ventana, base de comparación y etapa de
+  aplicación de ese resguardo; no reconstruirlo con periodos arbitrarios.
+- IMPLEMENTACIÓN RECUPERADA en TES:
+    adjustment_scope: vendor / franchise / not_targeted.
+    adjustment_origin: wave / manual / not_targeted.
+    ept_diff = ept - ept_new (reducción positiva).
+    ept_reduction_pct = 1 - ept_new / ept.
+    reductions-only exige alcanzar required_diff_mins.
+- No confundir esas magnitudes con deltas de resultados: delta = Post - Pre.
+  Revisar la convención de ept_change_min y ept_change_pct en el exportador;
+  el nombre de una columna por sí solo no garantiza su signo.
+- Para cambios por franquicia, revisar el alcance efectivo a tiendas. No tratar
+  adjustment_scope='franchise' como si solo afectara al vendor de referencia.
+
+4. HISTORIAL Y EXPORTACIÓN DE AJUSTES
+
+Flujo acordado:
+  to_adjust_now -> results_export -> Apps Script -> ept_adjustment_history.
+  Limpiar el input después de registrar correctamente el resultado.
+
+Las columnas de origen y destino deben coincidir en NOMBRE Y ORDEN mientras el
+script las valide/escriba por posición. Igual conjunto de nombres no es suficiente.
+
+Orden del destino observado en el error del 09-sep-2026:
+  executed_at
+  wave
+  flag
+  adjustment_scope
+  franchise_id
+  franchise_name
+  vendor_code
+  vertical_type
+  store_name
+  ept_old
+  ept_change_pct
+  ept_new
+  ept_change_min
+
+Errores ya resueltos/identificados:
+- Faltaba vertical_type en results_export.
+- En otra versión, vertical_type y vendor_code estaban intercambiados.
+
+Este es el orden observado, no una prohibición de evolucionar el esquema.
+Si se cambia, actualizar exportador y consumidor coordinadamente. No borrar
+vertical_type para esconder una discrepancia ni perder el historial existente.
+
+5. WAVES, COHORTES Y ANÁLISIS PRE/POST
+
+5.1 Ventana y pertenencia
+
+- ACUERDO: una wave finaliza a los 14 días de su inicio; limitar su evaluación
+  a esa ventana, sin seguir acumulando días de Post indefinidamente.
+- Evitar el off-by-one de BETWEEN: si se expresa como ventana de 14 días desde
+  start_date, usar [start_date, start_date + 14 días). Verificar el timestamp
+  de implementación y si el análisis existente trabaja por días completos.
+- Para waves aún abiertas, no incorporar fechas posteriores al corte disponible.
+- ACUERDO: mantener latest wave por vendor para el análisis de efecto.
+  No reemplazarlo por ever_reduced_vendors, alternativa descartada.
+- Determinar latest por fecha real de inicio/ejecución según el modelo; no por
+  orden alfabético del nombre de wave. Resolver empates de forma determinística.
+- Esa política no obliga a eliminar el historial de reincidencias en Wave Analysis.
+
+5.2 Cohortes y joins
+
+Separar explícitamente:
+  configurados/targeted; activos Pre; activos Post; activos en ambos periodos.
+
+- Un INNER JOIN Pre-Post elimina vendors presentes en un solo periodo.
+- FULL JOIN permite conservar la unión de activos Pre y Post.
+- LEFT JOIN desde el universo configurado conserva los vendors configurados,
+  incluso sin actividad en una o ambas ventanas.
+- No rellenar con 0 un promedio ausente: ausencia de órdenes no es tiempo cero.
+- Mostrar conteos de cohortes cuando sea necesario explicar cambios de cobertura.
+- Si un vendor está duplicado por ciudad, consolidarlo en la ciudad con más
+  órdenes; fijar la ventana usada para esa asignación y evitar doble conteo.
+
+5.3 Comparadores y deltas
+
+- Para intervenciones que abarcan franquicias completas puede no existir control
+  dentro de la misma franquicia.
+- Se acordó incluir resto_de_chile agregado: UNA fila por periodo, excluyendo
+  courier_business y definiendo de manera consistente qué queda fuera del tratado.
+- Resto de Chile es una referencia; no llamarlo control experimental sin diseño
+  que lo justifique. Un cambio Pre/Post por sí solo no demuestra causalidad.
+- Delta de tiempos y órdenes = Post - Pre.
+- Para shares, reportar diferencias en puntos porcentuales; no confundirlas con
+  cambios porcentuales relativos. Ejemplo: 10% -> 12% = +2 pp, no +2% relativo.
+- Recalcular medias/shares desde sus bases; no promediar promedios o porcentajes
+  de tiendas sin ponderación cuando se busca el resultado agregado de órdenes.
+
+6. FECHAS Y PERIODOS
+
+- Semana de lunes a domingo.
+- Última semana = última semana calendario COMPLETA, no últimos 7 días:
+    inicio = DATE_SUB(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)), INTERVAL 1 WEEK)
+    fin    = DATE_SUB(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)), INTERVAL 1 DAY)
+- Últimos 7 días hasta ayer:
+    inicio = DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+    fin    = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+- El corte habitual de resultados es AYER, no hoy, salvo pedido explícito.
+- Preferencia de trabajo: no introducir conversiones de timezone sin solicitud;
+  conservar la semántica de fechas/horas de la query fuente y explicitar el campo.
+- Distinguir ventana de análisis de lookback de fuente: leer 7 días extra para
+  reconstruir estados no significa incluirlos en las métricas del periodo.
+- Error conocido: analysis_start_date = CURRENT_DATE() - 1 y end_date igual
+  analiza un solo día. source_start_date = analysis_start_date - 7 no lo cambia.
+
+Comparaciones históricas:
+- EPT 8w ago se compara contra la semana base de referencia, no necesariamente
+  contra hoy. Si la base es la última semana completa, su inicio está a -1W y
+  la semana 8W anterior puede quedar a -9W desde el inicio de la semana actual.
+- Ejemplo usado: base 10–16 agosto 2026; referencia 8W: 15–21 junio 2026 si se
+  desplaza exactamente 8 semanas. Validar siempre las fechas calculadas con la
+  query vigente; no confiar en rótulos o ejemplos históricos inconsistentes.
+- Para trigger_comparison se trabajó con implementación -> ayer y comparación
+  de días de semana equivalentes desplazados 14 días; es un diseño específico.
+- En otra comparación se pidió viernes -> ayer frente a los mismos días -7 días.
+  No mezclar desplazamientos de 7 y 14 días entre análisis.
+- "Post comprende anteayer y ayer, 18:00 a 20:59" significa DOS fechas Post y
+  el filtro horario aplicado a cada una: hora >= 18:00 y < 21:00. No interpretar
+  anteayer como Pre, ni usar un intervalo continuo que incluya toda la madrugada.
+
+7. DEFINICIONES DE MÉTRICAS Y DENOMINADORES
+
+- orders: verificar el identificador de orden y el grano de la fuente. Después
+  de joins/UNNEST, COUNT(*) puede dejar de representar cantidad de órdenes.
+- EPT: declarar si incluye o excluye HDM. Para históricos de reducción, sin HDM.
+- AWT: conservar unidades y fórmula de la fuente. Distinguir promedio de AWT,
+  AWT máximo de saturación y proporción de órdenes por bucket.
+- HDM: distinguir minutos añadidos, share de órdenes con HDM y #activaciones.
+  Especificar si avg_hdm usa todas las órdenes o solo las que recibieron HDM.
+- HDM share: órdenes con HDM / órdenes de la base elegible, según flag/campo
+  validado en la query. No usar #activaciones como numerador.
+- IMPLEMENTACIÓN RECUPERADA en trigger_pre_post_grade_tag_18_21.txt:
+    AWT10: share de órdenes con awt > 10 (no >= 10).
+    highprep: SUM(highprep) / SUM(base_highprep).
+    seamless: share con non_seamless_order IS FALSE.
+  Conservar la base elegible y el tratamiento de NULL de la query correspondiente.
+- En reportes que usan casuísticas, revisar el campo causal original de AWT10;
+  no sustituirlo automáticamente por awt > 10 solo por compartir el nombre.
+- ACUERDO: mantener el nombre AWT10 ya usado en el análisis solicitado.
+- highpreptime y awt10 son SHARES en las comparaciones; revisar escala 0–1 vs
+  0–100. No presentar una suma de flags o un conteo como porcentaje.
+- No sustituir SUM(highprep)/SUM(base_highprep) por AVG(highprep) sin comprobar
+  que cada fila y cada denominador representan exactamente lo mismo.
+- partner_performance, slow, TT y pickup time: usar la definición de la query
+  original. No inventar umbrales, restas entre timestamps o causalidades.
+- Usar división segura ante denominador cero; no convertir "sin base" en 0%
+  sin una decisión explícita de presentación.
+
+8. AWT0 Y DISTRIBUCIONES
+
+- Buckets acordados: AWT_null, AWT_0, AWT_1, ..., AWT_20, AWT_21plus.
+- Mantener NULL separado: no convertir AWT faltante en AWT0.
+- El redondeo/truncamiento para asignar AWT de órdenes a buckets debe seguir
+  la query vigente. No copiar por intuición el DIV usado en estados de saturación.
+- Incorporar awt_0min y awt_1min como shares según la definición del análisis.
+- Mostrar curvas Pre/Post por wave y por flag.
+- Hay DOS distribuciones distintas:
+  a) buckets de minutos de AWT por orden;
+  b) tramos del share AWT0 por vendor: 0–10%, 10–20%, ..., 90–100%.
+- Para (b), calcular primero el AWT0 share de cada vendor en el periodo y luego
+  agrupar vendors y sus órdenes por tramo. Mostrar #vendors, #orders y %Orders CL.
+- Definir límites sin solapamiento; por ejemplo [50%,60%) y último tramo con
+  100% incluido. Vendors sin base de AWT necesitan tratamiento explícito.
+- %Orders CL del tramo = órdenes de esos vendors / órdenes CL del mismo periodo
+  y universo. No es el promedio del AWT0 share, ni solo las órdenes AWT0 del tramo.
+- 17–30 agosto 2026 fue una ventana pedida para este análisis; no dejarla como
+  fecha fija universal.
+
+9. TAGS Y EXPERIMENTO HDM 2293
+
+Fuente confirmada:
+  fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_attributes_latest
+  array: attributes.vendor_monitor_tags
+  país: entity_id = 'PY_CL'
+  cruce: vendor_code
+  alias solicitado: trigger_tag
+
+Tags exactos usados:
+  awt_hdm_city_exp_vga_2293_pilot
+  awt_hdm_city_exp_vga_2293_control
+
+- Traer tags con LEFT JOIN para conservar el universo original.
+- Filtrar tags y entity_id en la subquery/CTE de tags. Un WHERE posterior que
+  exija tag no nulo puede eliminar las filas sin match del LEFT JOIN.
+- UNNEST puede generar varias filas por vendor. DISTINCT vendor_code, tag no
+  garantiza una fila por vendor. Revisar multiplicidad antes de agregar órdenes.
+- Si aparecen ambos tags para una tienda, no elegir uno arbitrariamente ni
+  duplicar métricas: reportar el conflicto o seguir la regla del repositorio.
+- LIKE '%2293%' se usó para explorar; para los brazos definidos usar tags exactos.
+- is_active IS TRUE estaba comentado en el ejemplo: no activarlo silenciosamente.
+- La fuente se llama latest: no asumir que reconstruye el tag histórico de cada
+  orden. Identificar esta limitación al etiquetar periodos anteriores.
+
+Filtro HISTÓRICO de una comparación específica: excluir estos franchise_id:
+  0011r00002VoI4m
+  0011r00002VoHw6
+  0011r00002VoHw2
+  0016900002Zmgdu
+  0011r00002VoISN
+  0011r00002VoHw4
+  0011r00002VoHvw
+  0011r00002VoHwC
+No aplicar esta lista globalmente. Al usar NOT IN, revisar qué se quiere hacer
+con franchise_id NULL: SQL puede excluir esas filas aunque no estén en la lista.
+
+10. SCHEMA Y FUENTES DE DATOS
+
+- El inventario de schema compartido el 03-sep-2026 es la referencia para construir
+  y depurar queries: 1.896 registros, correspondientes a 12 tablas en esa versión.
+- Columnas del inventario: project_id, dataset_id, table_name, column_path,
+  data_type, ordinal_position, is_nullable, field_level.
+- INFORMATION_SCHEMA.COLUMNS describe columnas top-level;
+  INFORMATION_SCHEMA.COLUMN_FIELD_PATHS agrega rutas de campos nested.
+  No asumir que la segunda sustituye por sí sola a la primera.
+- Antes de usar un campo, buscar su ruta y tipo. Si es ARRAY, comprobar el UNNEST
+  y el grano que introduce. No deducir el schema por nombres parecidos.
+
+Fuentes usadas; algunas se enumeran solo con dataset/tabla porque este resumen
+no verifica su project_id completo:
+  il_logistics.fact_logistic_orders
+  il_core.dim_partner
+  automated_tables_reports.non_seamless_reasons_dashboard_casuistics
+  non_seamless_delivery_order_level
+  timings_awt (query/archivo trabajado; no asumir que sea una tabla física)
+
+Rutas completas confirmadas en consultas/conversaciones:
+  fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_orders
+  fulfillment-dwh-production.curated_data_shared_vendor.growth_vendor_attributes_latest
+  fulfillment-dwh-production.curated_data_shared_vendor.growth_vendors
+  peya-bi-tools-pro.il_core.fact_orders
+
+No construir las rutas incompletas agregándoles un proyecto supuesto.
+growth_vendor_orders se ha usado para datos de órdenes/HDM; los eventos de
+activación requieren su fuente específica.
+
+11. NOTEBOOKS Y PRESENTACIÓN DE RESULTADOS
+
+Separación acordada:
+- comparison: evaluación Pre/Post y Holy Table; mantener los cambios de AWT0
+  pertinentes para medir resultados.
+- wave analysis: actividad, composición, buckets AWT, barras apiladas,
+  reincidentes y evolución de implementaciones.
+
+- En Wave Analysis, ordenar el eje X por executed_at, no por texto de wave.
+- Filtro solicitado para reductions en ese análisis:
+    Manual adjustment
+    AWT0 reduction
+    Median Franchise-Grade
+    FIR last week
+    EPT 8w ago
+    High preptime | FIR vertical-cuisine
+- No trasladar los requisitos de tener actividad Pre y Post a un gráfico de
+  cantidad de vendors implementados: su universo es el de ajustes según los
+  filtros propios del gráfico. Revisar el predicado completo en el notebook.
+- Holy Table: mostrar %Orders CL separado para Pre y Post, calculado con órdenes
+  CL del periodo correspondiente a cada wave. No reutilizar un denominador
+  global de otra fecha para todas las waves.
+- En paneles por wave y flag, incluir fechas y %Orders CL en los subtítulos.
+- Dashboard de HDM/cierres: dos páginas, actividad y efecto; monitoreo diario
+  en Looker Studio.
+- Para df_4groups se pidió un gráfico mensual simple de avg_ept_minutes por
+  group_name excluyendo agosto. Esa exclusión es específica de ese gráfico.
+- No cambiar nombres de métricas, flags ni estructuras exportadas sin revisar
+  dependencias en gráficos, Sheets y scripts.
+
+12. ENTORNO LOCAL Y APRENDIZAJES TÉCNICOS
+
+- Proyecto de ejecución BigQuery: peya-chile. No confundir proyecto que ejecuta
+  la consulta con proyectos que alojan las tablas leídas.
+- Se probó exitosamente en el equipo de trabajo:
+    from google.cloud import bigquery
+    client = bigquery.Client(project='peya-chile')
+    df = client.query(QUERY_INPUT).to_dataframe()
+- Conservar la autenticación que ya funciona. El comentario "impersonadas" no
+  demuestra impersonación: BigQuery.Client usa las credenciales resueltas por
+  el entorno y estas deben verificarse si la tarea depende de su identidad.
+- Distinguir errores: acceso a INFORMATION_SCHEMA; permiso de uso del proyecto
+  peya-chile; scopes insuficientes para Sheets/Drive. No todos se arreglan
+  instalando paquetes ni son errores de SQL.
+- IT recomendó ADC con scopes de cloud-platform, spreadsheets y drive cuando
+  el flujo necesite esos servicios. No almacenar credenciales en el repositorio.
+- Entorno de trabajo: Antigravity / VS Code, notebooks y kernel .venv.
+  Verificar intérprete/kernel antes de atribuir un import fallido al código.
+- Los notebooks se han migrado a GitHub. Modularizar funciones en .py es una
+  posibilidad técnica; preservar la separación funcional de notebooks solicitada
+  y no emprender una reestructuración general por un cambio puntual.
+
+13. COMPROBACIONES QUE EVITAN ERRORES REPETIDOS
+
+Antes de entregar un cambio, revisar lo pertinente a la tarea:
+- Fechas reales y días incluidos; hoy vs ayer; semana completa vs últimos 7 días.
+- País, verticales y exclusiones consistentes en todas las bases.
+- Identificador de orden, grano y multiplicidad de cada JOIN/UNNEST.
+- Vendors configurados vs activos vs intersección Pre/Post.
+- Latest wave, límite de 14 días y orden cronológico de waves.
+- Shares calculados con su denominador correcto y deltas expresados en pp.
+- NULL distinto de cero; ningún vendor/orden desaparece por un filtro accidental.
+- EPT base distinto de HDM; activaciones distintas de órdenes afectadas.
+- Prioridad de cierres, reviewed y resolución de intervalos solapados.
+- Columnas exportadas alineadas por nombre y orden.
+
+Si un total de órdenes es mucho menor al esperado, revisar primero la ventana
+real, los filtros y los joins. En un caso se esperaba ~1M de órdenes restaurants
+en 7 días y se veían ~90k con una configuración que tenía inicio=fin=ayer.
+Esas cifras son una observación histórica, no un umbral fijo de validación.
+
+14. TRAZABILIDAD Y LÍMITES DE ESTA CONSOLIDACIÓN
+
+Base principal: conversaciones del proyecto hasta el 10-sep-2026, incluyendo
+dashboard/triggers (01-sep), latest wave (02-sep), schema (03-sep), ventanas y
+volumen (04-sep), notebooks y configuración local (ago–sep), experimento/tags
+(08-sep) y orden de columnas (09-sep).
+
+También se recuperaron descripciones de versiones de archivos de EPT, TES,
+comparison y estados de saturación. No se inspeccionó en esta sesión el checkout
+actual del repositorio ni se consultó producción. Los archivos mencionados son
+referencias para localizar si están disponibles; su mención no garantiza que
+estén presentes en el repositorio de Codex.
+
+Puntos abiertos que no deben completarse por intuición:
+- Política activa de AWT0 y piso EPT; selección y desempate entre candidatos.
+- Ventana exacta del resguardo de partner_performance.
+- Tabla/campos exactos de eventos HDM y detalles de expiración/reapertura.
+- Definiciones de métricas que dependen de casuísticas o bases elegibles.
+- Límites temporales exactos del Pre y del día de implementación por análisis.
+
+Al actualizar este documento, registrar fecha y regla que se reemplaza, y mantener
+los ejemplos históricos claramente separados de la configuración vigente.
