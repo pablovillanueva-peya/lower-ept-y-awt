@@ -1,0 +1,338 @@
+[2026-09-04 12:50:40] [INFO] [MainPipeline] ============================================================
+[2026-09-04 12:50:40] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-09-04 12:50:40] [INFO] [MainPipeline] ============================================================
+[2026-09-04 12:50:40] [INFO] [MainPipeline] --- PASO 1: Consulta a BigQuery peya-bi-tools-pro (Lookback: 1 días) ---
+[2026-09-04 12:50:40] [INFO] [BigQueryExtractor] Autenticando con Application Default Credentials (ADC) en proyecto: peya-bi-tools-pro
+[2026-09-04 12:50:49] [INFO] [BigQueryExtractor] Ejecutando consulta en BigQuery (País: 2, Status: ON_LINE, Lookback: 1 días)...
+[2026-09-04 12:50:53] [ERROR] [BigQueryExtractor] Error al ejecutar la consulta en BigQuery: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: b73f3de6-19e2-469a-b02e-7739caef127f
+
+[2026-09-04 12:50:53] [CRITICAL] [MainPipeline] El proceso falló con error: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: b73f3de6-19e2-469a-b02e-7739caef127f
+Traceback (most recent call last):
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\main.py", line 43, in run_pipeline
+    df_raw = extractor.get_latest_vendors(days_lookback=days_lookback)
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\src\bq_client.py", line 119, in get_latest_vendors
+    query_job = self.client.query(query)
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 3640, in query
+    return _job_helpers.query_jobs_insert(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<8 lines>...
+        job_retry,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 205, in query_jobs_insert
+    future = do_query()
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 151, in do_query
+    query_job._begin(retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\cloud\bigquery\job\query.py", line 1489, in _begin
+    super(QueryJob, self)._begin(client=client, retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\cloud\bigquery\job\base.py", line 825, in _begin
+    api_response = client._call_api(
+        retry,
+    ...<6 lines>...
+        timeout=timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 905, in _call_api
+    return call()
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\venv\Lib\site-packages\google\cloud\_http\__init__.py", line 509, in api_request
+    raise exceptions.from_http_response(response)
+google.api_core.exceptions.Forbidden: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: b73f3de6-19e2-469a-b02e-7739caef127f
+
+[2026-09-04 12:56:49] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 12:56:49] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-09-04 12:56:49] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 12:56:49] [INFO] [MainPipeline] --- PASO 1: Buscando archivo del dia de hoy en 'data_vendors_drive' ---
+[2026-09-04 12:56:49] [INFO] [DriveVendorReader] Archivo de hoy encontrado: Reporte_Query_20260904_122734.csv (Ruta: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data_vendors_drive\Reporte_Query_20260904_122734.csv)
+[2026-09-04 12:56:49] [INFO] [DriveVendorReader] Leyendo archivo de vendors: Reporte_Query_20260904_122734.csv...
+[2026-09-04 12:56:49] [INFO] [DriveVendorReader] Archivo leido correctamente. Filas encontradas: 2
+[2026-09-04 12:56:49] [INFO] [DriveVendorReader] Columnas mapeadas para procesamiento: ['partner_id', 'partner_name', 'registered_date', 'partner_status', 'cuisine', 'franchise_name', 'vertical_type']
+[2026-09-04 12:56:49] [INFO] [MainPipeline] --- PASO 2: Aplicando Reglas de Preptime y Formato Seamless ---
+[2026-09-04 12:56:49] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (84 reglas)...
+[2026-09-04 12:56:49] [INFO] [VendorTransformer] Reglas activas: 19 franquicias, 14 cuisines, 8 verticales, 42 palabras clave. Default: 15 min.
+[2026-09-04 12:56:49] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 2 partners...
+[2026-09-04 12:56:49] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'KEYWORD': 2}
+[2026-09-04 12:56:49] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_125649.csv
+[2026-09-04 12:56:49] [INFO] [MainPipeline] CSV generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_125649.csv
+[2026-09-04 12:56:49] [INFO] [MainPipeline] [DRY RUN / SKIP UPLOAD] Omitiendo carga en el portal web.
+[2026-09-04 12:56:49] [INFO] [MainPipeline] Vista previa de los registros a procesar:
+  CODE     DAY-RANGE HOUR-RANGE  PREPARATION-BUFFER  PREPARATION-TIME      STRATEGY
+637486 MONDAY-SUNDAY       0-23                   2                30 OPS_TEMPORARY
+637483 MONDAY-SUNDAY       0-23                   2                25 OPS_TEMPORARY
+[2026-09-04 12:58:10] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 12:58:10] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-09-04 12:58:10] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 12:58:10] [INFO] [MainPipeline] --- PASO 1: Buscando archivo del dia de hoy en 'data_vendors_drive' ---
+[2026-09-04 12:58:10] [INFO] [DriveVendorReader] Archivo de hoy encontrado: Reporte_Query_20260904_122734.csv (Ruta: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data_vendors_drive\Reporte_Query_20260904_122734.csv)
+[2026-09-04 12:58:10] [INFO] [DriveVendorReader] Leyendo archivo de vendors: Reporte_Query_20260904_122734.csv...
+[2026-09-04 12:58:10] [INFO] [DriveVendorReader] Archivo leido correctamente. Filas encontradas: 2
+[2026-09-04 12:58:10] [INFO] [DriveVendorReader] Columnas mapeadas para procesamiento: ['partner_id', 'partner_name', 'registered_date', 'partner_status', 'cuisine', 'franchise_name', 'vertical_type']
+[2026-09-04 12:58:10] [INFO] [MainPipeline] --- PASO 2: Aplicando Reglas de Preptime y Formato Seamless ---
+[2026-09-04 12:58:10] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (84 reglas)...
+[2026-09-04 12:58:10] [INFO] [VendorTransformer] Reglas activas: 19 franquicias, 14 cuisines, 8 verticales, 42 palabras clave. Default: 15 min.
+[2026-09-04 12:58:10] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 2 partners...
+[2026-09-04 12:58:10] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'KEYWORD': 2}
+[2026-09-04 12:58:10] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_125810.csv
+[2026-09-04 12:58:10] [INFO] [MainPipeline] CSV generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_125810.csv
+[2026-09-04 12:58:10] [INFO] [MainPipeline] [DRY RUN / SKIP UPLOAD] Omitiendo carga en el portal web.
+[2026-09-04 12:58:10] [INFO] [MainPipeline] Vista previa de los registros a procesar:
+  CODE     DAY-RANGE HOUR-RANGE  PREPARATION-BUFFER  PREPARATION-TIME      STRATEGY
+637486 MONDAY-SUNDAY       0-23                   2                30 OPS_TEMPORARY
+637483 MONDAY-SUNDAY       0-23                   2                25 OPS_TEMPORARY
+[2026-09-04 12:58:25] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 12:58:25] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-09-04 12:58:25] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 12:58:25] [INFO] [MainPipeline] --- PASO 1: Buscando archivo del dia de hoy en 'data_vendors_drive' ---
+[2026-09-04 12:58:25] [INFO] [DriveVendorReader] Archivo de hoy encontrado: Reporte_Query_20260904_122734.csv (Ruta: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data_vendors_drive\Reporte_Query_20260904_122734.csv)
+[2026-09-04 12:58:25] [INFO] [DriveVendorReader] Leyendo archivo de vendors: Reporte_Query_20260904_122734.csv...
+[2026-09-04 12:58:25] [INFO] [DriveVendorReader] Archivo leido correctamente. Filas encontradas: 2
+[2026-09-04 12:58:25] [INFO] [DriveVendorReader] Columnas mapeadas para procesamiento: ['partner_id', 'partner_name', 'registered_date', 'partner_status', 'cuisine', 'franchise_name', 'vertical_type']
+[2026-09-04 12:58:25] [INFO] [MainPipeline] --- PASO 2: Aplicando Reglas de Preptime y Formato Seamless ---
+[2026-09-04 12:58:25] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (84 reglas)...
+[2026-09-04 12:58:25] [INFO] [VendorTransformer] Reglas activas: 19 franquicias, 14 cuisines, 8 verticales, 42 palabras clave. Default: 15 min.
+[2026-09-04 12:58:25] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 2 partners...
+[2026-09-04 12:58:25] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'KEYWORD': 2}
+[2026-09-04 12:58:25] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_125825.csv
+[2026-09-04 12:58:25] [INFO] [MainPipeline] CSV generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_125825.csv
+[2026-09-04 12:58:25] [INFO] [MainPipeline] --- PASO 3: Carga en Seamless Dashboard (PedidosYa Portal) ---
+[2026-09-04 12:58:25] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-09-04 12:58:25] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_125825.csv
+[2026-09-04 12:58:32] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-09-04 12:58:37] [INFO] [SeamlessUploader] Pantalla de autenticación Okta / SSO detectada.
+[2026-09-04 12:58:38] [INFO] [SeamlessUploader] Esperando confirmación de inicio de sesión Okta (MFA / Push / redirección)...
+👉 Si aparece la solicitud en tu teléfono o pantalla, por favor acéptala.
+[2026-09-04 12:58:50] [INFO] [SeamlessUploader] Autenticación completada. Acceso concedido al portal.
+[2026-09-04 12:58:52] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-09-04 12:58:57] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-09-04 12:58:58] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para carga completa de componentes...
+[2026-09-04 12:59:05] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-09-04 12:59:05] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' y seleccionar coincidencia <<<
+[2026-09-04 12:59:07] [INFO] [SeamlessUploader] Seleccionando con ArrowDown + Enter como respaldo...
+[2026-09-04 12:59:10] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-09-04 12:59:11] [WARNING] [SeamlessUploader] [Platform Country] No se detectó botón 'Continue' visible.
+[2026-09-04 12:59:11] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Clic en botón 'OD Vendors' <<<
+[2026-09-04 12:59:13] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-09-04 12:59:14] [WARNING] [SeamlessUploader] [Type of vendors] No se detectó botón 'Continue' visible.
+[2026-09-04 12:59:14] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Clic en opción 'Preparation times' <<<
+[2026-09-04 12:59:16] [INFO] [SeamlessUploader] Clic en opción de acción: div:has-text("Preparation times")
+[2026-09-04 12:59:17] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-09-04 12:59:18] [WARNING] [SeamlessUploader] [Type of action] No se detectó botón 'Continue' visible.
+[2026-09-04 12:59:18] [INFO] [SeamlessUploader] >>> PASO 4: Carga de Archivo CSV <<<
+[2026-09-04 12:59:20] [WARNING] [SeamlessUploader] No se encontró input[type='file']. Intentando dropzone...
+[2026-09-04 12:59:22] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-09-04 12:59:28] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\logs\seamless_success_20260904_125928.png
+[2026-09-04 12:59:28] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-09-04 12:59:29] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 12:59:29] [INFO] [MainPipeline] PROCESO COMPLETADO EXITOSAMENTE
+[2026-09-04 12:59:29] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 13:00:48] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 13:00:48] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-09-04 13:00:48] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 13:00:48] [INFO] [MainPipeline] --- PASO 1: Buscando archivo del dia de hoy en 'data_vendors_drive' ---
+[2026-09-04 13:00:48] [INFO] [DriveVendorReader] Archivo de hoy encontrado: Reporte_Query_20260904_122734.csv (Ruta: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data_vendors_drive\Reporte_Query_20260904_122734.csv)
+[2026-09-04 13:00:48] [INFO] [DriveVendorReader] Leyendo archivo de vendors: Reporte_Query_20260904_122734.csv...
+[2026-09-04 13:00:48] [INFO] [DriveVendorReader] Archivo leido correctamente. Filas encontradas: 2
+[2026-09-04 13:00:48] [INFO] [DriveVendorReader] Columnas mapeadas para procesamiento: ['partner_id', 'partner_name', 'registered_date', 'partner_status', 'cuisine', 'franchise_name', 'vertical_type']
+[2026-09-04 13:00:48] [INFO] [MainPipeline] --- PASO 2: Aplicando Reglas de Preptime y Formato Seamless ---
+[2026-09-04 13:00:48] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (84 reglas)...
+[2026-09-04 13:00:48] [INFO] [VendorTransformer] Reglas activas: 19 franquicias, 14 cuisines, 8 verticales, 42 palabras clave. Default: 15 min.
+[2026-09-04 13:00:48] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 2 partners...
+[2026-09-04 13:00:48] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'KEYWORD': 2}
+[2026-09-04 13:00:48] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_130048.csv
+[2026-09-04 13:00:48] [INFO] [MainPipeline] CSV generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_130048.csv
+[2026-09-04 13:00:48] [INFO] [MainPipeline] --- PASO 3: Carga en Seamless Dashboard (PedidosYa Portal) ---
+[2026-09-04 13:00:48] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-09-04 13:00:48] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_130048.csv
+[2026-09-04 13:00:49] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-09-04 13:00:55] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-09-04 13:00:55] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-09-04 13:00:57] [INFO] [SeamlessUploader] Clic en 'Mass updates': div:has-text("Mass updates")
+[2026-09-04 13:00:59] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-09-04 13:01:01] [INFO] [SeamlessUploader] Clic en 'Upload CSV': a:has-text("Upload CSV")
+[2026-09-04 13:01:03] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para carga completa de componentes...
+[2026-09-04 13:01:10] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-09-04 13:01:10] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' y seleccionar coincidencia <<<
+[2026-09-04 13:01:12] [INFO] [SeamlessUploader] Haciendo clic en la coincidencia del menú desplegable: [class*="option"]:has-text("PY_CL")
+[2026-09-04 13:01:14] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-09-04 13:01:15] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-04 13:01:17] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Clic en botón 'OD Vendors' <<<
+[2026-09-04 13:01:19] [INFO] [SeamlessUploader] Clic en botón de 'OD Vendors': button:has-text("OD Vendors")
+[2026-09-04 13:01:20] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-09-04 13:01:21] [INFO] [SeamlessUploader] [Type of vendors] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-04 13:01:23] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Clic en opción 'Preparation times' <<<
+[2026-09-04 13:01:24] [INFO] [SeamlessUploader] Clic en opción de acción: label:has-text("Preparation times")
+[2026-09-04 13:01:25] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-09-04 13:01:26] [INFO] [SeamlessUploader] [Type of action] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-04 13:01:28] [INFO] [SeamlessUploader] >>> PASO 4: Carga de Archivo CSV <<<
+[2026-09-04 13:01:31] [INFO] [SeamlessUploader] Archivo adjuntado correctamente: seamless_bulk_upload_20260904_130048.csv
+[2026-09-04 13:01:33] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-09-04 13:01:33] [INFO] [SeamlessUploader] Haciendo clic en botón final de confirmación.
+[2026-09-04 13:01:39] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\logs\seamless_success_20260904_130139.png
+[2026-09-04 13:01:39] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-09-04 13:01:39] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 13:01:39] [INFO] [MainPipeline] PROCESO COMPLETADO EXITOSAMENTE
+[2026-09-04 13:01:39] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 14:00:05] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 14:00:05] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-09-04 14:00:05] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 14:00:05] [INFO] [MainPipeline] --- PASO 1: Buscando archivo del dia de hoy en 'data_vendors_drive' ---
+[2026-09-04 14:00:05] [INFO] [DriveVendorReader] Archivo de hoy encontrado: Reporte_Query_20260904_135454.csv (Ruta: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data_vendors_drive\Reporte_Query_20260904_135454.csv)
+[2026-09-04 14:00:05] [INFO] [DriveVendorReader] Leyendo archivo de vendors: Reporte_Query_20260904_135454.csv...
+[2026-09-04 14:00:05] [INFO] [DriveVendorReader] Archivo leido correctamente. Filas encontradas: 21
+[2026-09-04 14:00:05] [INFO] [DriveVendorReader] Columnas mapeadas para procesamiento: ['partner_id', 'partner_name', 'registered_date', 'partner_status', 'cuisine', 'franchise_name', 'vertical_type']
+[2026-09-04 14:00:05] [INFO] [MainPipeline] --- PASO 2: Aplicando Reglas de Preptime y Formato Seamless ---
+[2026-09-04 14:00:05] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (85 reglas)...
+[2026-09-04 14:00:05] [INFO] [VendorTransformer] Reglas activas: 19 franquicias, 14 cuisines, 8 verticales, 43 palabras clave. Default: 15 min.
+[2026-09-04 14:00:05] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 21 partners...
+[2026-09-04 14:00:05] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'KEYWORD': 8, 'CUISINE': 7, 'DEFAULT': 6}
+[2026-09-04 14:00:05] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_140005.csv
+[2026-09-04 14:00:05] [INFO] [MainPipeline] CSV generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_140005.csv
+[2026-09-04 14:00:05] [INFO] [MainPipeline] --- PASO 3: Carga en Seamless Dashboard (PedidosYa Portal) ---
+[2026-09-04 14:00:05] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-09-04 14:00:05] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_140005.csv
+[2026-09-04 14:00:12] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-09-04 14:00:19] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-09-04 14:00:19] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-09-04 14:00:21] [INFO] [SeamlessUploader] Clic en 'Mass updates': div:has-text("Mass updates")
+[2026-09-04 14:00:23] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-09-04 14:00:25] [INFO] [SeamlessUploader] Clic en 'Upload CSV': a:has-text("Upload CSV")
+[2026-09-04 14:00:27] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para carga completa de componentes...
+[2026-09-04 14:00:34] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-09-04 14:00:34] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' y seleccionar coincidencia <<<
+[2026-09-04 14:00:37] [INFO] [SeamlessUploader] Haciendo clic en la coincidencia del menú desplegable: [class*="option"]:has-text("PY_CL")
+[2026-09-04 14:00:39] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-09-04 14:00:40] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-04 14:00:42] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Clic en botón 'OD Vendors' <<<
+[2026-09-04 14:00:44] [INFO] [SeamlessUploader] Clic en botón de 'OD Vendors': button:has-text("OD Vendors")
+[2026-09-04 14:00:45] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-09-04 14:00:46] [INFO] [SeamlessUploader] [Type of vendors] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-04 14:00:48] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Clic en opción 'Preparation times' <<<
+[2026-09-04 14:00:49] [INFO] [SeamlessUploader] Clic en opción de acción: label:has-text("Preparation times")
+[2026-09-04 14:00:51] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-09-04 14:00:52] [INFO] [SeamlessUploader] [Type of action] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-04 14:00:54] [INFO] [SeamlessUploader] >>> PASO 4: Carga de Archivo CSV <<<
+[2026-09-04 14:00:56] [INFO] [SeamlessUploader] Archivo adjuntado correctamente: seamless_bulk_upload_20260904_140005.csv
+[2026-09-04 14:00:58] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-09-04 14:00:58] [INFO] [SeamlessUploader] Haciendo clic en botón final de confirmación.
+[2026-09-04 14:01:04] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\logs\seamless_success_20260904_140104.png
+[2026-09-04 14:01:04] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-09-04 14:01:05] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 14:01:05] [INFO] [MainPipeline] PROCESO COMPLETADO EXITOSAMENTE
+[2026-09-04 14:01:05] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 14:03:36] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 14:03:36] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-09-04 14:03:36] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 14:03:36] [INFO] [MainPipeline] --- PASO 1: Buscando archivo del dia de hoy en 'data_vendors_drive' ---
+[2026-09-04 14:03:36] [INFO] [DriveVendorReader] Archivo de hoy encontrado: Reporte_Query_20260904_135454.csv (Ruta: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data_vendors_drive\Reporte_Query_20260904_135454.csv)
+[2026-09-04 14:03:36] [INFO] [DriveVendorReader] Leyendo archivo de vendors: Reporte_Query_20260904_135454.csv...
+[2026-09-04 14:03:36] [INFO] [DriveVendorReader] Archivo leido correctamente. Filas encontradas: 21
+[2026-09-04 14:03:36] [INFO] [DriveVendorReader] Columnas mapeadas para procesamiento: ['partner_id', 'partner_name', 'registered_date', 'partner_status', 'cuisine', 'franchise_name', 'vertical_type']
+[2026-09-04 14:03:36] [INFO] [MainPipeline] --- PASO 2: Aplicando Reglas de Preptime y Generando Resultados ---
+[2026-09-04 14:03:36] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (85 reglas)...
+[2026-09-04 14:03:36] [INFO] [VendorTransformer] Reglas activas: 19 franquicias, 14 cuisines, 8 verticales, 43 palabras clave. Default: 15 min.
+[2026-09-04 14:03:36] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 21 partners...
+[2026-09-04 14:03:36] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'KEYWORD': 8, 'CUISINE': 7, 'DEFAULT': 6}
+[2026-09-04 14:03:36] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_140336.csv
+[2026-09-04 14:03:36] [INFO] [VendorTransformer] Archivo de auditoría/resultados generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\reporte_auditoria_vendors_20260904_140336.csv
+[2026-09-04 14:03:36] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 14:03:36] [INFO] [MainPipeline] ARCHIVOS GENERADOS:
+[2026-09-04 14:03:36] [INFO] [MainPipeline] 1. CSV para Seamless: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_140336.csv
+[2026-09-04 14:03:36] [INFO] [MainPipeline] 2. Reporte de Auditoria Completo: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\reporte_auditoria_vendors_20260904_140336.csv
+[2026-09-04 14:03:36] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 14:03:36] [INFO] [MainPipeline] [DRY RUN / SKIP UPLOAD] Omitiendo carga en el portal web.
+[2026-09-04 15:58:33] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 15:58:33] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-09-04 15:58:33] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 15:58:33] [INFO] [MainPipeline] --- PASO 1: Buscando archivo del dia de hoy en 'data_vendors_drive' ---
+[2026-09-04 15:58:33] [INFO] [DriveVendorReader] Archivo de hoy encontrado: Reporte_Query_20260904_135454.csv (Ruta: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data_vendors_drive\Reporte_Query_20260904_135454.csv)
+[2026-09-04 15:58:33] [INFO] [DriveVendorReader] Leyendo archivo de vendors: Reporte_Query_20260904_135454.csv...
+[2026-09-04 15:58:33] [INFO] [DriveVendorReader] Archivo leido correctamente. Filas encontradas: 21
+[2026-09-04 15:58:33] [INFO] [DriveVendorReader] Columnas mapeadas para procesamiento: ['partner_id', 'partner_name', 'registered_date', 'partner_status', 'cuisine', 'franchise_name', 'vertical_type']
+[2026-09-04 15:58:33] [INFO] [MainPipeline] --- PASO 2: Aplicando Reglas de Preptime y Generando Resultados ---
+[2026-09-04 15:58:33] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (87 reglas)...
+[2026-09-04 15:58:33] [INFO] [VendorTransformer] Reglas activas: 20 franquicias, 14 cuisines, 8 verticales, 44 palabras clave. Default: 15 min.
+[2026-09-04 15:58:33] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 21 partners...
+[2026-09-04 15:58:33] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'KEYWORD': 9, 'CUISINE': 7, 'FRANCHISE': 1, 'DEFAULT': 4}
+[2026-09-04 15:58:33] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_155833.csv
+[2026-09-04 15:58:33] [INFO] [VendorTransformer] Archivo de auditoría/resultados generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\reporte_auditoria_vendors_20260904_155833.csv
+[2026-09-04 15:58:33] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 15:58:33] [INFO] [MainPipeline] ARCHIVOS GENERADOS:
+[2026-09-04 15:58:33] [INFO] [MainPipeline] 1. CSV para Seamless: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_155833.csv
+[2026-09-04 15:58:33] [INFO] [MainPipeline] 2. Reporte de Auditoria Completo: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\reporte_auditoria_vendors_20260904_155833.csv
+[2026-09-04 15:58:33] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 15:58:33] [INFO] [MainPipeline] --- PASO 3: Carga en Seamless Dashboard (PedidosYa Portal) ---
+[2026-09-04 15:58:33] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-09-04 15:58:33] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260904_155833.csv
+[2026-09-04 15:58:45] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-09-04 15:58:56] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-09-04 15:58:56] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-09-04 15:58:58] [INFO] [SeamlessUploader] Clic en 'Mass updates': div:has-text("Mass updates")
+[2026-09-04 15:59:01] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-09-04 15:59:02] [INFO] [SeamlessUploader] Clic en 'Upload CSV': a:has-text("Upload CSV")
+[2026-09-04 15:59:05] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para carga completa de componentes...
+[2026-09-04 15:59:12] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-09-04 15:59:12] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' y seleccionar coincidencia <<<
+[2026-09-04 15:59:14] [INFO] [SeamlessUploader] Haciendo clic en la coincidencia del menú desplegable: [class*="option"]:has-text("PY_CL")
+[2026-09-04 15:59:16] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-09-04 15:59:18] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-04 15:59:19] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Clic en botón 'OD Vendors' <<<
+[2026-09-04 15:59:21] [INFO] [SeamlessUploader] Clic en botón de 'OD Vendors': button:has-text("OD Vendors")
+[2026-09-04 15:59:22] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-09-04 15:59:23] [INFO] [SeamlessUploader] [Type of vendors] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-04 15:59:25] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Clic en opción 'Preparation times' <<<
+[2026-09-04 15:59:27] [INFO] [SeamlessUploader] Clic en opción de acción: label:has-text("Preparation times")
+[2026-09-04 15:59:28] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-09-04 15:59:29] [INFO] [SeamlessUploader] [Type of action] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-04 15:59:31] [INFO] [SeamlessUploader] >>> PASO 4: Carga de Archivo CSV <<<
+[2026-09-04 15:59:34] [INFO] [SeamlessUploader] Archivo adjuntado correctamente: seamless_bulk_upload_20260904_155833.csv
+[2026-09-04 15:59:36] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-09-04 15:59:36] [INFO] [SeamlessUploader] Haciendo clic en botón final de confirmación.
+[2026-09-04 15:59:42] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\logs\seamless_success_20260904_155942.png
+[2026-09-04 15:59:42] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-09-04 15:59:44] [INFO] [MainPipeline] ======================================================================
+[2026-09-04 15:59:44] [INFO] [MainPipeline] PROCESO COMPLETADO EXITOSAMENTE
+[2026-09-04 15:59:44] [INFO] [MainPipeline] ======================================================================

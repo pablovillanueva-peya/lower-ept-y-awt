@@ -1,0 +1,11 @@
+﻿partner_id,partner_name,registered_date,partner_status,cuisine,franchise_name,vertical_type,PREPTIME_CARGADO,CRITERIO_ASIGNACION
+637799,Toktok Sabor Spa,2026-09-04,ON_LINE,Comida China,,restaurants,15,DEFAULT (RESTAURANTS/COURIER 15 MIN)
+637772,Dúo Pizzas - El Bosque.,2026-09-04,ON_LINE,Pizzas,,restaurants,25,CUISINE (PIZZA)
+637790,Pollos Villa Park.,2026-09-04,ON_LINE,Sándwiches,,restaurants,25,KEYWORD (POLLO)
+637679,Rick Burger.,2026-09-04,ON_LINE,Hamburguesas,,restaurants,20,CUISINE (HAMBURGUESAS)
+637838,Sushin,2026-09-04,ON_LINE,Sushi,,restaurants,30,CUISINE (SUSHI)
+637818,Sabor Bravo 448,2026-09-04,ON_LINE,Comida Mexicana,,restaurants,20,CUISINE (MEXICANA)
+637742,Efrata Restaurant.,2026-09-04,ON_LINE,Hamburguesas,,restaurants,20,CUISINE (HAMBURGUESAS)
+637824,Palestinos Sabores Arabes,2026-09-04,ON_LINE,Comida Árabe,,restaurants,20,CUISINE (ARABE)
+637783,Shawarmas Cuaticos --,2026-09-04,ON_LINE,,,courier_business,20,KEYWORD (SHAWARMA)
+637786,Cafe Mahuzier -- 911,2026-09-04,ON_LINE,,,courier_business,10,KEYWORD (CAFE)

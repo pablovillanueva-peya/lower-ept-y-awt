@@ -1,0 +1,7 @@
+﻿partner_id,partner_name,registered_date,partner_status,cuisine,franchise_name,vertical_type,PREPTIME_CARGADO,CRITERIO_ASIGNACION
+638023,Cactus Burgers,2026-09-07,ON_LINE,,,restaurants,20,KEYWORD (BURGER)
+637959,La Picá Del Beto,2026-09-07,ON_LINE,,,restaurants,15,DEFAULT (RESTAURANTS/COURIER 15 MIN)
+638054,Clautartas,2026-09-07,ON_LINE,,,restaurants,15,DEFAULT (RESTAURANTS/COURIER 15 MIN)
+638012,Bajonzinni,2026-09-07,ON_LINE,,,restaurants,15,DEFAULT (RESTAURANTS/COURIER 15 MIN)
+637968,Balmasoda.,2026-09-07,ON_LINE,,,restaurants,15,DEFAULT (RESTAURANTS/COURIER 15 MIN)
+637973,Burguesia And Rolls -- 714,2026-09-07,ON_LINE,,,courier_business,30,KEYWORD (ROLL)

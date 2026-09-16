@@ -1,0 +1,90 @@
+rule_type,match_value,preptime_minutes,description
+franchise,MCDONALDS,15,McDonald's
+franchise,BURGER KING,18,Burger King
+franchise,KFC,20,Kentucky Fried Chicken
+franchise,PAPA JOHNS,25,Papa John's Pizza
+franchise,STARBUCKS,10,Starbucks Coffee
+franchise,DOMINOS,20,Domino's Pizza
+franchise,LITTLE CAESARS,15,Little Caesars Pizza
+franchise,JUAN MAESTRO,15,Juan Maestro
+franchise,PEDRO JUAN Y DIEGO,15,Pedro Juan y Diego
+franchise,DUNKIN,10,Dunkin' Donuts
+franchise,SUBWAY,15,Subway
+franchise,MELT,20,Melt Pizzas
+franchise,TELEPIZZA,20,Telepizza
+franchise,WENDYS,18,Wendy's
+franchise,CARLS JR,18,Carl's Jr.
+franchise,DOGGIS,15,Doggis
+franchise,TOMMY BEANS,15,Tommy Beans
+franchise,MAMUT,20,Mamut
+franchise,TARRAGONA,20,Tarragona
+franchise,VITTORE,20,Vittore
+cuisine,PIZZA,25,Pizzerias
+cuisine,SUSHI,30,Sushi y cocina japonesa
+cuisine,HAMBURGUESAS,20,Hamburguesas y sandwiches
+cuisine,POLLO,25,Pollo frito o asado
+cuisine,FARMACIA,10,Farmacias y droguerias
+cuisine,SUPERMERCADOS,15,Supermercados y minimarkets
+cuisine,BEBIDAS,10,Botillerias y licores
+cuisine,HELADOS,10,Heladerias y postres
+cuisine,CAFETERIA,10,Cafes y desayunos
+cuisine,CHINESE,25,Comida china
+cuisine,CHINA,25,Comida china
+cuisine,CHINO,25,Comida china
+cuisine,PERUANA,25,Comida peruana
+cuisine,MEXICANA,20,Comida mexicana y tacos
+cuisine,ARABE,20,Comida arabe y shawarma
+cuisine,PASTA,25,Pastas e italiana
+vertical,PHARMACIES,10,Farmacias y cuidado personal
+vertical,PHARMACY,10,Farmacias y droguerias
+vertical,GROCERIES,15,Supermercados y tiendas de conveniencia
+vertical,SUPERMERCADOS,15,Supermercados y minimarkets
+vertical,DARKSTORES,10,Tiendas propias / PedidosYa Market
+vertical,DRINKS,10,Botillerias y bebidas
+vertical,PETS,10,Mascotas y veterinaria
+vertical,SHOPS,15,Tiendas y retail
+keyword,SUSHI,30,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,ROLL,30,Deducido por palabra clave en nombre (Sushi Rolls)
+keyword,PIZZ,25,Deducido por palabra clave en nombre (Pizza / Pizzeria)
+keyword,BURGER,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,BURGUER,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,SMASH,20,Deducido por palabra clave en nombre (Smash Burgers)
+keyword,HAMBURGUES,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,SANDWICH,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,SANGUCH,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,LOMITO,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,CHACARERO,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,COMPLETO,15,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,HOTDOG,15,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,POLLO,25,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,POLLERIA,25,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,CHICKEN,25,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,EMPANADA,15,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,PASTA,25,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,TACO,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,MEXICAN,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,PERUAN,25,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,CEVICHE,25,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,CHIN,25,Deducido por palabra clave en nombre (Chino / China / Chinese)
+keyword,WOK,25,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,SHAWARMA,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,ARABE,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,CARNE,25,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,PARRILL,25,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,ASADO,25,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,CAFE,10,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,COFFEE,10,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,DONA,10,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,DONUT,10,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,HELAD,10,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,ICE CREAM,10,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,POSTRE,10,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,PASTEL,10,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,TORTA,10,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,SALAD,15,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,ENSALADA,15,Deducido por palabra clave en nombre (Restaurants / Courier)
+keyword,LIQUOR,10,Deducido por palabra clave en nombre (Botilleria / Bebidas)
+keyword,BOTILLER,10,Deducido por palabra clave en nombre (Botillerias)
+keyword,CERVE,10,Deducido por palabra clave en nombre (Cerveceria / Cervezas)
+keyword,VEGAN,20,Deducido por palabra clave en nombre (Restaurants / Courier)
+default,DEFAULT,15,Valor por defecto cuando no hay coincidencias

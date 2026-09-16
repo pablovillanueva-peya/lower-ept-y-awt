@@ -1,0 +1,574 @@
+[2026-08-21 09:01:27] [INFO] [TestPipeline] --- Probando Transformación con datos simulados ---
+[2026-08-21 09:01:27] [INFO] [VendorTransformer] Aplicando reglas de negocio a 3 registros...
+[2026-08-21 09:01:27] [INFO] [VendorTransformer] Reglas de negocio aplicadas. Total de registros resultantes: 2
+[2026-08-21 09:01:27] [INFO] [VendorTransformer] Archivo CSV generado exitosamente en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\mock_vendors_test_20260821_090127.csv
+[2026-08-21 09:01:27] [INFO] [TestPipeline] Test completado. Archivo generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\mock_vendors_test_20260821_090127.csv
+[2026-08-21 09:03:24] [INFO] [TestPipeline] --- Probando Jerarquía de Reglas de Negocio (Franquicia -> Cuisine -> Nombre -> Default) ---
+[2026-08-21 09:03:24] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas encontradas)...
+[2026-08-21 09:03:24] [INFO] [VendorTransformer] Reglas cargadas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:03:24] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 4 partners...
+[2026-08-21 09:03:24] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'FRANCHISE': 1, 'CUISINE': 1, 'KEYWORD': 1, 'DEFAULT': 1}
+[2026-08-21 09:03:24] [INFO] [VendorTransformer] CSV de vendors generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\mock_preptime_test_20260821_090324.csv
+[2026-08-21 09:03:24] [INFO] [TestPipeline] Test de reglas exitoso. Archivo generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\mock_preptime_test_20260821_090324.csv
+[2026-08-21 09:15:15] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:15:15] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634736 (PIZZA -> 25 MIN)
+[2026-08-21 09:15:15] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:15:15] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 09:15:15] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:15:15] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 09:15:15] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 09:15:15] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_091515.csv
+[2026-08-21 09:15:15] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_091515.csv
+[2026-08-21 09:16:51] [INFO] [MainPipeline] ============================================================
+[2026-08-21 09:16:51] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-08-21 09:16:51] [INFO] [MainPipeline] ============================================================
+[2026-08-21 09:16:51] [INFO] [MainPipeline] --- MODO TEST ACTIVADO: Procesando EXCLUSIVAMENTE Partner ID 634736 ---
+[2026-08-21 09:16:51] [INFO] [MainPipeline] --- PASO 2: Aplicando Reglas de Preptime y Formato Seamless ---
+[2026-08-21 09:16:51] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 09:16:51] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:16:51] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 09:16:51] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 09:16:51] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\seamless_bulk_upload_20260821_091651.csv
+[2026-08-21 09:16:51] [INFO] [MainPipeline] CSV de Seamless listo: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\seamless_bulk_upload_20260821_091651.csv
+[2026-08-21 09:16:51] [INFO] [MainPipeline] [MODO SECO / SKIP UPLOAD] Omitiendo carga en la web.
+[2026-08-21 09:19:59] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:19:59] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634736 (PIZZA -> 25 MIN)
+[2026-08-21 09:19:59] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:19:59] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 09:19:59] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:19:59] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 09:19:59] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 09:19:59] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_091959.csv
+[2026-08-21 09:19:59] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_091959.csv
+[2026-08-21 09:19:59] [INFO] [TestPipeline] Iniciando prueba de carga en Seamless Portal con el partner 634736...
+[2026-08-21 09:19:59] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-21 09:19:59] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_091959.csv
+[2026-08-21 09:20:00] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates
+[2026-08-21 09:20:08] [INFO] [SeamlessUploader] Pantalla de autenticación Okta / SSO detectada.
+[2026-08-21 09:20:08] [INFO] [SeamlessUploader] Ingresando usuario corporativo: cristian.alvarez@pedidosya.com
+[2026-08-21 09:20:10] [INFO] [SeamlessUploader] Esperando confirmación de inicio de sesión Okta (MFA / Push / redirección)...
+👉 Si aparece la solicitud en tu teléfono o pantalla, por favor acéptala.
+[2026-08-21 09:20:31] [INFO] [SeamlessUploader] Autenticación completada. Acceso concedido al portal.
+[2026-08-21 09:20:33] [INFO] [SeamlessUploader] >>> PASO 1 WIZARD: Platform Country (PY_CL) <<<
+[2026-08-21 09:20:33] [INFO] [SeamlessUploader] [Paso 1 Country] Seleccionando opción: 'PY_CL'...
+[2026-08-21 09:20:34] [WARNING] [SeamlessUploader] [Paso 1 Country] No se pudo seleccionar automáticamente 'PY_CL'.
+[2026-08-21 09:20:34] [INFO] [SeamlessUploader] [Paso 1 Country] Buscando botón de continuación...
+[2026-08-21 09:20:35] [WARNING] [SeamlessUploader] [Paso 1 Country] No se encontró botón 'Continue' visible con selectores estándar.
+[2026-08-21 09:20:35] [INFO] [SeamlessUploader] >>> PASO 2 WIZARD: Type of vendors (OD Vendors) <<<
+[2026-08-21 09:20:35] [INFO] [SeamlessUploader] [Paso 2 Vendors] Seleccionando opción: 'OD Vendors'...
+[2026-08-21 09:20:36] [WARNING] [SeamlessUploader] [Paso 2 Vendors] No se pudo seleccionar automáticamente 'OD Vendors'.
+[2026-08-21 09:20:36] [INFO] [SeamlessUploader] [Paso 2 Vendors] Buscando botón de continuación...
+[2026-08-21 09:20:37] [WARNING] [SeamlessUploader] [Paso 2 Vendors] No se encontró botón 'Continue' visible con selectores estándar.
+[2026-08-21 09:20:37] [INFO] [SeamlessUploader] >>> PASO 3 WIZARD: Type of actions (Preparations times) <<<
+[2026-08-21 09:20:37] [INFO] [SeamlessUploader] [Paso 3 Actions] Seleccionando opción: 'Preparations times'...
+[2026-08-21 09:20:38] [WARNING] [SeamlessUploader] [Paso 3 Actions] No se pudo seleccionar automáticamente 'Preparations times'.
+[2026-08-21 09:20:38] [INFO] [SeamlessUploader] [Paso 3 Actions] Buscando botón de continuación...
+[2026-08-21 09:20:39] [WARNING] [SeamlessUploader] [Paso 3 Actions] No se encontró botón 'Continue' visible con selectores estándar.
+[2026-08-21 09:20:39] [INFO] [SeamlessUploader] >>> PASO 4 WIZARD: Carga de Archivo CSV <<<
+[2026-08-21 09:20:41] [WARNING] [SeamlessUploader] No se encontró input[type='file'] directamente. Buscando botón de subida...
+[2026-08-21 09:20:43] [INFO] [SeamlessUploader] Buscando botón de confirmación/subida final...
+[2026-08-21 09:20:43] [INFO] [SeamlessUploader] Confirmando carga con botón: button:has-text("Submit")
+[2026-08-21 09:21:43] [ERROR] [SeamlessUploader] Timeout en Seamless Portal: Locator.click: Timeout 60000ms exceeded.
+Call log:
+  - waiting for locator("button:has-text(\"Submit\")").first
+    - locator resolved to <button type="submit" class="sc-fmKESZ jTYsfN Button-Root Button-Root--primary">Submit ticket</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div role="presentation" data-test-id="overlay" class="react-joyride__overlay">…</div> from <div id="react-joyride-portal">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div role="presentation" data-test-id="overlay" class="react-joyride__overlay">…</div> from <div id="react-joyride-portal">…</div> subtree intercepts pointer events
+  2 × retrying click action
+      - waiting 100ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <html lang="en" data-theme="pedidosya-light-b2b">…</html> intercepts pointer events
+  2 × retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div role="presentation" data-test-id="overlay" class="react-joyride__overlay">…</div> from <div id="react-joyride-portal">…</div> subtree intercepts pointer events
+  27 × retrying click action
+       - waiting 500ms
+       - waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <html lang="en" data-theme="pedidosya-light-b2b">…</html> intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+       - waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <html lang="en" data-theme="pedidosya-light-b2b">…</html> intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+       - waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <iframe class="pluginIframe"></iframe> from <div id="root">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+       - waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <iframe class="pluginIframe"></iframe> from <div id="root">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <html lang="en" data-theme="pedidosya-light-b2b">…</html> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+. Screenshot en C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\logs\error_timeout_1787318503.png
+[2026-08-21 09:22:39] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:22:39] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634736 (PIZZA -> 25 MIN)
+[2026-08-21 09:22:39] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:22:39] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 09:22:39] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:22:39] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 09:22:39] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 09:22:39] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_092239.csv
+[2026-08-21 09:22:39] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_092239.csv
+[2026-08-21 09:22:39] [INFO] [TestPipeline] Iniciando prueba de carga en Seamless Portal con el partner 634736...
+[2026-08-21 09:22:39] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-21 09:22:39] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_092239.csv
+[2026-08-21 09:22:41] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates
+[2026-08-21 09:22:48] [INFO] [SeamlessUploader] Detectado iframe de la aplicación Seamless (iframe.pluginIframe). Interactuando dentro del iframe...
+[2026-08-21 09:22:48] [INFO] [SeamlessUploader] >>> PASO 1 WIZARD: Platform Country (PY_CL) <<<
+[2026-08-21 09:22:48] [INFO] [SeamlessUploader] [Platform Country] Buscando selector para opción: 'PY_CL'...
+[2026-08-21 09:22:49] [INFO] [SeamlessUploader] [Platform Country] Desplegando menú...
+[2026-08-21 09:22:50] [INFO] [SeamlessUploader] [Platform Country] Escribiendo 'PY_CL' con teclado...
+[2026-08-21 09:22:52] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-08-21 09:22:53] [INFO] [SeamlessUploader] [Platform Country] Clic en botón 'Continue'.
+[2026-08-21 09:25:14] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:25:14] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634736 (PIZZA -> 25 MIN)
+[2026-08-21 09:25:14] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:25:14] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 09:25:14] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:25:14] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 09:25:14] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 09:25:14] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_092514.csv
+[2026-08-21 09:25:14] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_092514.csv
+[2026-08-21 09:25:14] [INFO] [TestPipeline] Iniciando prueba de carga en Seamless Portal con el partner 634736...
+[2026-08-21 09:25:14] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-21 09:25:14] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_092514.csv
+[2026-08-21 09:25:15] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates
+[2026-08-21 09:25:21] [INFO] [SeamlessUploader] Detectado iframe de la aplicación Seamless (iframe.pluginIframe). Interactuando dentro del iframe...
+[2026-08-21 09:25:21] [INFO] [SeamlessUploader] Verificando si estamos en la sección 'Mass Updates'...
+[2026-08-21 09:25:23] [INFO] [SeamlessUploader] Ya nos encontramos en la pantalla de 'Mass Updates'.
+[2026-08-21 09:25:26] [INFO] [SeamlessUploader] Detectado iframe de la aplicación Seamless (iframe.pluginIframe). Interactuando dentro del iframe...
+[2026-08-21 09:25:26] [INFO] [SeamlessUploader] >>> PASO 1 WIZARD: Platform Country (PY_CL) <<<
+[2026-08-21 09:25:26] [INFO] [SeamlessUploader] [Platform Country] Buscando selector para opción: 'PY_CL'...
+[2026-08-21 09:25:27] [INFO] [SeamlessUploader] [Platform Country] Desplegando menú...
+[2026-08-21 09:25:28] [INFO] [SeamlessUploader] [Platform Country] Escribiendo 'PY_CL' con teclado...
+[2026-08-21 09:25:30] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-08-21 09:25:31] [INFO] [SeamlessUploader] [Platform Country] Clic en botón 'Continue'.
+[2026-08-21 09:28:24] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:28:24] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634736 (PIZZA -> 25 MIN)
+[2026-08-21 09:28:24] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:28:24] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 09:28:24] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:28:24] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 09:28:24] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 09:28:24] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_092824.csv
+[2026-08-21 09:28:24] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_092824.csv
+[2026-08-21 09:28:24] [INFO] [TestPipeline] Iniciando prueba de carga en Seamless Portal con el partner 634736...
+[2026-08-21 09:28:24] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-21 09:28:24] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_092824.csv
+[2026-08-21 09:28:25] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-08-21 09:28:32] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe). Interactuando dentro del iframe...
+[2026-08-21 09:28:32] [INFO] [SeamlessUploader] Navegando a la sección 'Mass updates'...
+[2026-08-21 09:28:34] [INFO] [SeamlessUploader] Haciendo clic en 'Mass updates' dentro del app container: div:has-text("Mass updates")
+[2026-08-21 09:28:36] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-08-21 09:28:38] [INFO] [SeamlessUploader] Seleccionando opción 'Upload CSV': a:has-text("Upload CSV")
+[2026-08-21 09:28:43] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe). Interactuando dentro del iframe...
+[2026-08-21 09:28:43] [INFO] [SeamlessUploader] >>> PASO 1 WIZARD: Platform Country (PY_CL) <<<
+[2026-08-21 09:28:43] [INFO] [SeamlessUploader] [Platform Country] Desplegando opciones para 'Platform Country'...
+[2026-08-21 09:28:44] [INFO] [SeamlessUploader] [Platform Country] Clic en control para desplegar lista de opciones...
+[2026-08-21 09:28:45] [INFO] [SeamlessUploader] [Platform Country] Seleccionando 'PY_CL' de la lista...
+[2026-08-21 09:28:45] [INFO] [SeamlessUploader] [Platform Country] Escribiendo 'PY_CL' y pulsando Enter...
+[2026-08-21 09:28:47] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-08-21 09:28:49] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue'.
+[2026-08-21 09:29:49] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue'.
+[2026-08-21 09:29:51] [INFO] [SeamlessUploader] >>> PASO 2 WIZARD: Type of vendors (OD Vendors) <<<
+[2026-08-21 09:29:51] [INFO] [SeamlessUploader] [Type of vendors] Desplegando opciones para 'Type of vendors'...
+[2026-08-21 09:29:52] [INFO] [SeamlessUploader] [Type of vendors] Clic en control para desplegar lista de opciones...
+[2026-08-21 09:29:54] [INFO] [SeamlessUploader] [Type of vendors] Seleccionando 'OD Vendors' de la lista...
+[2026-08-21 09:29:55] [INFO] [SeamlessUploader] [Type of vendors] Escribiendo 'OD Vendors' y pulsando Enter...
+[2026-08-21 09:29:57] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-08-21 09:29:58] [INFO] [SeamlessUploader] [Type of vendors] Clic en 'Continue'.
+[2026-08-21 09:30:58] [WARNING] [SeamlessUploader] [Type of vendors] No se detectó botón 'Continue' visible.
+[2026-08-21 09:30:58] [INFO] [SeamlessUploader] >>> PASO 3 WIZARD: Type of action (Preparations times) <<<
+[2026-08-21 09:30:58] [INFO] [SeamlessUploader] [Type of action] Desplegando opciones para 'Type of action'...
+[2026-08-21 09:30:59] [INFO] [SeamlessUploader] [Type of action] Clic en control para desplegar lista de opciones...
+[2026-08-21 09:31:00] [INFO] [SeamlessUploader] [Type of action] Seleccionando 'Preparations times' de la lista...
+[2026-08-21 09:31:00] [INFO] [SeamlessUploader] [Type of action] Escribiendo 'Preparations times' y pulsando Enter...
+[2026-08-21 09:31:03] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-08-21 09:31:04] [INFO] [SeamlessUploader] [Type of action] Clic en 'Continue'.
+[2026-08-21 09:32:04] [WARNING] [SeamlessUploader] [Type of action] No se detectó botón 'Continue' visible.
+[2026-08-21 09:32:04] [INFO] [SeamlessUploader] >>> PASO 4 WIZARD: Carga de Archivo CSV <<<
+[2026-08-21 09:32:06] [WARNING] [SeamlessUploader] No se encontró input[type='file']. Intentando dropzone...
+[2026-08-21 09:32:08] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-08-21 09:32:14] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\logs\seamless_success_20260821_093214.png
+[2026-08-21 09:32:14] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-08-21 09:34:03] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:34:03] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634736 (PIZZA -> 25 MIN)
+[2026-08-21 09:34:03] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:34:03] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 09:34:03] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:34:03] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 09:34:03] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 09:34:03] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_093403.csv
+[2026-08-21 09:34:03] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_093403.csv
+[2026-08-21 09:34:03] [INFO] [TestPipeline] Iniciando prueba de carga en Seamless Portal con el partner 634736...
+[2026-08-21 09:34:03] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-21 09:34:03] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_093403.csv
+[2026-08-21 09:34:04] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-08-21 09:34:11] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe). Interactuando dentro del iframe...
+[2026-08-21 09:34:11] [INFO] [SeamlessUploader] Navegando a la sección 'Mass updates'...
+[2026-08-21 09:34:13] [INFO] [SeamlessUploader] Clic en 'Mass updates' (app container): div:has-text("Mass updates")
+[2026-08-21 09:34:15] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-08-21 09:34:17] [INFO] [SeamlessUploader] Clic en 'Upload CSV': a:has-text("Upload CSV")
+[2026-08-21 09:34:22] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe). Interactuando dentro del iframe...
+[2026-08-21 09:34:22] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Seleccionar 'PY_CL' <<<
+[2026-08-21 09:34:23] [INFO] [SeamlessUploader] [Paso 1] Clic en control desplegable: text="Select Platform Country"
+[2026-08-21 09:35:24] [INFO] [SeamlessUploader] [Paso 1] Clic en control desplegable: div:has-text("Select Platform Country")
+[2026-08-21 09:35:25] [INFO] [SeamlessUploader] [Paso 1] Escribiendo 'PY_CL' directamente en el input del iframe...
+[2026-08-21 09:35:28] [INFO] [SeamlessUploader] [Paso 1] Clic en botón Continue (button:has-text("Continue"))
+[2026-08-21 09:35:31] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Seleccionar 'OD Vendors' <<<
+[2026-08-21 09:35:32] [INFO] [SeamlessUploader] [Paso 2] Clic en control desplegable: div:has-text("Type of vendors") >> [role="combobox"]
+[2026-08-21 09:35:33] [INFO] [SeamlessUploader] [Paso 2] Escribiendo 'OD Vendors' directamente en el input del iframe...
+[2026-08-21 09:35:36] [INFO] [SeamlessUploader] [Paso 2] Clic en botón Continue (button:has-text("Continue"))
+[2026-08-21 09:35:39] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Seleccionar 'Preparations times' <<<
+[2026-08-21 09:35:40] [INFO] [SeamlessUploader] [Paso 3] Clic en control desplegable: div:has-text("Type of action") >> [role="combobox"]
+[2026-08-21 09:35:41] [INFO] [SeamlessUploader] [Paso 3] Escribiendo 'Preparations times' directamente en el input del iframe...
+[2026-08-21 09:35:44] [INFO] [SeamlessUploader] [Paso 3] Clic en botón Continue (button:has-text("Continue"))
+[2026-08-21 09:35:47] [INFO] [SeamlessUploader] >>> PASO 4 WIZARD: Carga de Archivo CSV <<<
+[2026-08-21 09:35:49] [WARNING] [SeamlessUploader] No se encontró input[type='file']. Intentando dropzone...
+[2026-08-21 09:35:51] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-08-21 09:35:57] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\logs\seamless_success_20260821_093557.png
+[2026-08-21 09:35:57] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-08-21 09:37:52] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:37:52] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634736 (PIZZA -> 25 MIN)
+[2026-08-21 09:37:52] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:37:52] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 09:37:52] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:37:52] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 09:37:52] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 09:37:52] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_093752.csv
+[2026-08-21 09:37:52] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_093752.csv
+[2026-08-21 09:37:52] [INFO] [TestPipeline] Iniciando prueba de carga en Seamless Portal con el partner 634736...
+[2026-08-21 09:37:52] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-21 09:37:52] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_093752.csv
+[2026-08-21 09:37:54] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-08-21 09:37:59] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-21 09:37:59] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-08-21 09:38:01] [INFO] [SeamlessUploader] Clic en 'Mass updates': div:has-text("Mass updates")
+[2026-08-21 09:38:03] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-08-21 09:38:05] [INFO] [SeamlessUploader] Clic en 'Upload CSV': a:has-text("Upload CSV")
+[2026-08-21 09:38:07] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para que todos los componentes terminen de renderizar...
+[2026-08-21 09:38:14] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-21 09:38:14] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' <<<
+[2026-08-21 09:38:17] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-08-21 09:38:18] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:38:20] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Clic en botón 'OD Vendors' <<<
+[2026-08-21 09:38:23] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-08-21 09:38:24] [INFO] [SeamlessUploader] [Type of vendors] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:38:26] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Clic en opción 'Preparation times' <<<
+[2026-08-21 09:38:28] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-08-21 09:38:29] [INFO] [SeamlessUploader] [Type of action] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:38:31] [INFO] [SeamlessUploader] >>> PASO 4: Carga de Archivo CSV <<<
+[2026-08-21 09:38:33] [WARNING] [SeamlessUploader] No se encontró input[type='file']. Intentando dropzone...
+[2026-08-21 09:38:35] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-08-21 09:38:41] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\logs\seamless_success_20260821_093841.png
+[2026-08-21 09:38:41] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-08-21 09:39:32] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:39:32] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634736 (PIZZA -> 25 MIN)
+[2026-08-21 09:39:32] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:39:32] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 09:39:32] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:39:32] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 09:39:32] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 09:39:32] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_093932.csv
+[2026-08-21 09:39:32] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_093932.csv
+[2026-08-21 09:39:32] [INFO] [TestPipeline] Iniciando prueba de carga en Seamless Portal con el partner 634736...
+[2026-08-21 09:39:32] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-21 09:39:32] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_093932.csv
+[2026-08-21 09:39:33] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-08-21 09:39:39] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-21 09:39:39] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-08-21 09:39:41] [INFO] [SeamlessUploader] Clic en 'Mass updates': div:has-text("Mass updates")
+[2026-08-21 09:39:43] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-08-21 09:39:45] [INFO] [SeamlessUploader] Clic en 'Upload CSV': a:has-text("Upload CSV")
+[2026-08-21 09:39:47] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para carga completa de componentes...
+[2026-08-21 09:39:54] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-21 09:39:54] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' y seleccionar coincidencia <<<
+[2026-08-21 09:39:56] [INFO] [SeamlessUploader] Haciendo clic en la coincidencia del menú desplegable: [class*="option"]:has-text("PY_CL")
+[2026-08-21 09:39:58] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-08-21 09:39:59] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:40:01] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Clic en botón 'OD Vendors' <<<
+[2026-08-21 09:40:02] [INFO] [SeamlessUploader] Clic en botón de 'OD Vendors': button:has-text("OD Vendors")
+[2026-08-21 09:40:04] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-08-21 09:40:05] [INFO] [SeamlessUploader] [Type of vendors] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:40:06] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Clic en opción 'Preparation times' <<<
+[2026-08-21 09:40:08] [INFO] [SeamlessUploader] Clic en opción de acción: label:has-text("Preparation times")
+[2026-08-21 09:40:09] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-08-21 09:40:10] [INFO] [SeamlessUploader] [Type of action] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:40:12] [INFO] [SeamlessUploader] >>> PASO 4: Carga de Archivo CSV <<<
+[2026-08-21 09:40:14] [INFO] [SeamlessUploader] Archivo adjuntado correctamente: test_seamless_634736_20260821_093932.csv
+[2026-08-21 09:40:16] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-08-21 09:40:16] [INFO] [SeamlessUploader] Haciendo clic en botón final de confirmación.
+[2026-08-21 09:40:23] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\logs\seamless_success_20260821_094022.png
+[2026-08-21 09:40:23] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-08-21 09:45:42] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:45:42] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634736 (PIZZA -> 25 MIN)
+[2026-08-21 09:45:42] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:45:42] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 09:45:42] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:45:42] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 09:45:42] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 09:45:42] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_094542.csv
+[2026-08-21 09:45:42] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_094542.csv
+[2026-08-21 09:45:42] [INFO] [TestPipeline] Iniciando prueba de carga en Seamless Portal con el partner 634736...
+[2026-08-21 09:45:42] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-21 09:45:42] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634736_20260821_094542.csv
+[2026-08-21 09:45:49] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-08-21 09:45:58] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-21 09:45:59] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-08-21 09:46:01] [INFO] [SeamlessUploader] Clic en 'Mass updates': div:has-text("Mass updates")
+[2026-08-21 09:46:03] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-08-21 09:46:05] [INFO] [SeamlessUploader] Clic en 'Upload CSV': a:has-text("Upload CSV")
+[2026-08-21 09:46:07] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para carga completa de componentes...
+[2026-08-21 09:46:14] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-21 09:46:14] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' y seleccionar coincidencia <<<
+[2026-08-21 09:46:16] [INFO] [SeamlessUploader] Haciendo clic en la coincidencia del menú desplegable: [class*="option"]:has-text("PY_CL")
+[2026-08-21 09:46:19] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-08-21 09:46:20] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:46:22] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Clic en botón 'OD Vendors' <<<
+[2026-08-21 09:46:23] [INFO] [SeamlessUploader] Clic en botón de 'OD Vendors': button:has-text("OD Vendors")
+[2026-08-21 09:46:24] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-08-21 09:46:25] [INFO] [SeamlessUploader] [Type of vendors] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:46:27] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Clic en opción 'Preparation times' <<<
+[2026-08-21 09:46:29] [INFO] [SeamlessUploader] Clic en opción de acción: label:has-text("Preparation times")
+[2026-08-21 09:46:30] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-08-21 09:46:31] [INFO] [SeamlessUploader] [Type of action] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:46:33] [INFO] [SeamlessUploader] >>> PASO 4: Carga de Archivo CSV <<<
+[2026-08-21 09:46:36] [INFO] [SeamlessUploader] Archivo adjuntado correctamente: test_seamless_634736_20260821_094542.csv
+[2026-08-21 09:46:38] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-08-21 09:46:38] [INFO] [SeamlessUploader] Haciendo clic en botón final de confirmación.
+[2026-08-21 09:46:44] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\logs\seamless_success_20260821_094644.png
+[2026-08-21 09:46:44] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-08-21 09:51:16] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:51:16] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634433 (PIZZA -> 25 MIN)
+[2026-08-21 09:51:16] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 09:51:16] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 09:51:16] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 09:51:16] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 09:51:16] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 09:51:16] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260821_095116.csv
+[2026-08-21 09:51:16] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260821_095116.csv
+[2026-08-21 09:51:16] [INFO] [TestPipeline] Iniciando carga en Seamless Portal para partner 634433...
+[2026-08-21 09:51:16] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-21 09:51:16] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260821_095116.csv
+[2026-08-21 09:51:23] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-08-21 09:51:32] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-21 09:51:32] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-08-21 09:51:34] [INFO] [SeamlessUploader] Clic en 'Mass updates': div:has-text("Mass updates")
+[2026-08-21 09:51:37] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-08-21 09:51:38] [INFO] [SeamlessUploader] Clic en 'Upload CSV': a:has-text("Upload CSV")
+[2026-08-21 09:51:41] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para carga completa de componentes...
+[2026-08-21 09:51:48] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-21 09:51:48] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' y seleccionar coincidencia <<<
+[2026-08-21 09:51:50] [INFO] [SeamlessUploader] Haciendo clic en la coincidencia del menú desplegable: [class*="option"]:has-text("PY_CL")
+[2026-08-21 09:51:53] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-08-21 09:51:54] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:51:55] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Clic en botón 'OD Vendors' <<<
+[2026-08-21 09:51:57] [INFO] [SeamlessUploader] Clic en botón de 'OD Vendors': button:has-text("OD Vendors")
+[2026-08-21 09:51:58] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-08-21 09:51:59] [INFO] [SeamlessUploader] [Type of vendors] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:52:01] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Clic en opción 'Preparation times' <<<
+[2026-08-21 09:52:03] [INFO] [SeamlessUploader] Clic en opción de acción: label:has-text("Preparation times")
+[2026-08-21 09:52:04] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-08-21 09:52:05] [INFO] [SeamlessUploader] [Type of action] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 09:52:07] [INFO] [SeamlessUploader] >>> PASO 4: Carga de Archivo CSV <<<
+[2026-08-21 09:52:09] [INFO] [SeamlessUploader] Archivo adjuntado correctamente: test_seamless_634433_20260821_095116.csv
+[2026-08-21 09:52:11] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-08-21 09:52:12] [INFO] [SeamlessUploader] Haciendo clic en botón final de confirmación.
+[2026-08-21 09:52:18] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\logs\seamless_success_20260821_095218.png
+[2026-08-21 09:52:18] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-08-21 11:30:40] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 11:30:40] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634433 (PIZZA -> 25 MIN)
+[2026-08-21 11:30:40] [INFO] [TestPipeline] ======================================================================
+[2026-08-21 11:30:40] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (23 reglas)...
+[2026-08-21 11:30:40] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 9 palabras clave. Default: 20 min.
+[2026-08-21 11:30:40] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-21 11:30:40] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-21 11:30:40] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260821_113040.csv
+[2026-08-21 11:30:40] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260821_113040.csv
+[2026-08-21 11:30:40] [INFO] [TestPipeline] Iniciando carga en Seamless Portal para partner 634433...
+[2026-08-21 11:30:40] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-21 11:30:40] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260821_113040.csv
+[2026-08-21 11:30:46] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-08-21 11:30:55] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-21 11:30:55] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-08-21 11:30:57] [INFO] [SeamlessUploader] Clic en 'Mass updates': div:has-text("Mass updates")
+[2026-08-21 11:30:59] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-08-21 11:31:01] [INFO] [SeamlessUploader] Clic en 'Upload CSV': a:has-text("Upload CSV")
+[2026-08-21 11:31:03] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para carga completa de componentes...
+[2026-08-21 11:31:11] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-21 11:31:11] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' y seleccionar coincidencia <<<
+[2026-08-21 11:31:12] [INFO] [SeamlessUploader] Haciendo clic en la coincidencia del menú desplegable: [class*="option"]:has-text("PY_CL")
+[2026-08-21 11:31:15] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-08-21 11:31:16] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 11:31:18] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Clic en botón 'OD Vendors' <<<
+[2026-08-21 11:31:19] [INFO] [SeamlessUploader] Clic en botón de 'OD Vendors': button:has-text("OD Vendors")
+[2026-08-21 11:31:20] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-08-21 11:31:22] [INFO] [SeamlessUploader] [Type of vendors] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 11:31:23] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Clic en opción 'Preparation times' <<<
+[2026-08-21 11:31:25] [INFO] [SeamlessUploader] Clic en opción de acción: label:has-text("Preparation times")
+[2026-08-21 11:31:26] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-08-21 11:31:27] [INFO] [SeamlessUploader] [Type of action] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-21 11:31:29] [INFO] [SeamlessUploader] >>> PASO 4: Carga de Archivo CSV <<<
+[2026-08-21 11:31:32] [INFO] [SeamlessUploader] Archivo adjuntado correctamente: test_seamless_634433_20260821_113040.csv
+[2026-08-21 11:31:34] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-08-21 11:31:34] [INFO] [SeamlessUploader] Haciendo clic en botón final de confirmación.
+[2026-08-21 11:31:40] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\logs\seamless_success_20260821_113140.png
+[2026-08-21 11:31:40] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-08-21 13:19:55] [INFO] [MainPipeline] ============================================================
+[2026-08-21 13:19:55] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-08-21 13:19:55] [INFO] [MainPipeline] ============================================================
+[2026-08-21 13:19:55] [INFO] [MainPipeline] --- PASO 1: Consulta a BigQuery peya-bi-tools-pro (Lookback: 1 días) ---
+[2026-08-21 13:19:55] [INFO] [BigQueryExtractor] Autenticando con Application Default Credentials (ADC) en proyecto: peya-bi-tools-pro
+[2026-08-21 13:20:02] [INFO] [BigQueryExtractor] Ejecutando consulta en BigQuery (País: 2, Status: ON_LINE, Lookback: 1 días)...
+[2026-08-21 13:20:03] [ERROR] [BigQueryExtractor] Error al ejecutar la consulta en BigQuery: ('invalid_grant: Bad Request', {'error': 'invalid_grant', 'error_description': 'Bad Request'})
+[2026-08-21 13:20:03] [CRITICAL] [MainPipeline] El proceso falló con error: ('invalid_grant: Bad Request', {'error': 'invalid_grant', 'error_description': 'Bad Request'})
+Traceback (most recent call last):
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\main.py", line 43, in run_pipeline
+    df_raw = extractor.get_latest_vendors(days_lookback=days_lookback)
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\src\bq_client.py", line 86, in get_latest_vendors
+    query_job = self.client.query(query)
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 3624, in query
+    return _job_helpers.query_jobs_insert(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<8 lines>...
+        job_retry,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 205, in query_jobs_insert
+    future = do_query()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 151, in do_query
+    query_job._begin(retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\query.py", line 1489, in _begin
+    super(QueryJob, self)._begin(client=client, retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\base.py", line 825, in _begin
+    api_response = client._call_api(
+        retry,
+    ...<6 lines>...
+        timeout=timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 895, in _call_api
+    return call()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\_http\__init__.py", line 482, in api_request
+    response = self._make_request(
+        method=method,
+    ...<6 lines>...
+        extra_api_info=extra_api_info,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\_http\__init__.py", line 341, in _make_request
+    return self._do_request(
+           ~~~~~~~~~~~~~~~~^
+        method, url, headers, data, target_object, timeout=timeout
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\_http\__init__.py", line 379, in _do_request
+    return self.http.request(
+           ~~~~~~~~~~~~~~~~~^
+        url=url, method=method, headers=headers, data=data, timeout=timeout
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\auth\transport\requests.py", line 624, in request
+    self.credentials.before_request(auth_request, method, url, request_headers)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\auth\credentials.py", line 240, in before_request
+    self._blocking_refresh(request)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\auth\credentials.py", line 203, in _blocking_refresh
+    self.refresh(request)
+    ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\auth\credentials.py", line 517, in refresh
+    self._perform_refresh_token(request)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\oauth2\credentials.py", line 435, in _perform_refresh_token
+    ) = reauth.refresh_grant(
+        ~~~~~~~~~~~~~~~~~~~~^
+        request,
+        ^^^^^^^^
+    ...<6 lines>...
+        enable_reauth_refresh=self._enable_reauth_refresh,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\oauth2\reauth.py", line 370, in refresh_grant
+    _client._handle_error_response(response_data, retryable_error)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\oauth2\_client.py", line 73, in _handle_error_response
+    raise exceptions.RefreshError(
+        error_details, response_data, retryable=retryable_error
+    )
+google.auth.exceptions.RefreshError: ('invalid_grant: Bad Request', {'error': 'invalid_grant', 'error_description': 'Bad Request'})

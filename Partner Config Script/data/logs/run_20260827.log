@@ -1,0 +1,453 @@
+[2026-08-27 15:14:41] [INFO] [TestPipeline] ======================================================================
+[2026-08-27 15:14:41] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634433 (PIZZA -> 25 MIN)
+[2026-08-27 15:14:41] [INFO] [TestPipeline] ======================================================================
+[2026-08-27 15:14:41] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (27 reglas)...
+[2026-08-27 15:14:41] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 4 verticales, 9 palabras clave. Default: 20 min.
+[2026-08-27 15:14:41] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-27 15:14:41] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-27 15:14:41] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260827_151441.csv
+[2026-08-27 15:14:41] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260827_151441.csv
+[2026-08-27 15:14:41] [INFO] [TestPipeline] Iniciando carga en Seamless Portal para partner 634433...
+[2026-08-27 15:14:41] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-27 15:14:41] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260827_151441.csv
+[2026-08-27 15:14:57] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-08-27 15:15:05] [INFO] [SeamlessUploader] Pantalla de autenticación Okta / SSO detectada.
+[2026-08-27 15:15:06] [INFO] [SeamlessUploader] Esperando confirmación de inicio de sesión Okta (MFA / Push / redirección)...
+👉 Si aparece la solicitud en tu teléfono o pantalla, por favor acéptala.
+[2026-08-27 15:15:21] [INFO] [SeamlessUploader] Autenticación completada. Acceso concedido al portal.
+[2026-08-27 15:15:23] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-08-27 15:15:25] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-08-27 15:15:26] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para carga completa de componentes...
+[2026-08-27 15:15:33] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-27 15:15:33] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' y seleccionar coincidencia <<<
+[2026-08-27 15:16:43] [INFO] [TestPipeline] ======================================================================
+[2026-08-27 15:16:43] [INFO] [TestPipeline] EJECUTANDO TEST CONTROLADO PARA PARTNER ID: 634433 (PIZZA -> 25 MIN)
+[2026-08-27 15:16:43] [INFO] [TestPipeline] ======================================================================
+[2026-08-27 15:16:43] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (27 reglas)...
+[2026-08-27 15:16:43] [INFO] [VendorTransformer] Reglas activas: 5 franquicias, 8 cuisines, 4 verticales, 9 palabras clave. Default: 20 min.
+[2026-08-27 15:16:43] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 1 partners...
+[2026-08-27 15:16:43] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'CUISINE': 1}
+[2026-08-27 15:16:43] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260827_151643.csv
+[2026-08-27 15:16:43] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260827_151643.csv
+[2026-08-27 15:16:43] [INFO] [TestPipeline] Iniciando carga en Seamless Portal para partner 634433...
+[2026-08-27 15:16:43] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-08-27 15:16:43] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_seamless_634433_20260827_151643.csv
+[2026-08-27 15:16:46] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-08-27 15:16:57] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-27 15:16:57] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-08-27 15:16:59] [INFO] [SeamlessUploader] Clic en 'Mass updates': div:has-text("Mass updates")
+[2026-08-27 15:17:02] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-08-27 15:17:03] [INFO] [SeamlessUploader] Clic en 'Upload CSV': a:has-text("Upload CSV")
+[2026-08-27 15:17:06] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para carga completa de componentes...
+[2026-08-27 15:17:13] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-08-27 15:17:13] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' y seleccionar coincidencia <<<
+[2026-08-27 15:17:16] [INFO] [SeamlessUploader] Haciendo clic en la coincidencia del menú desplegable: [class*="option"]:has-text("PY_CL")
+[2026-08-27 15:17:18] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-08-27 15:17:19] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-27 15:17:21] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Clic en botón 'OD Vendors' <<<
+[2026-08-27 15:17:22] [INFO] [SeamlessUploader] Clic en botón de 'OD Vendors': button:has-text("OD Vendors")
+[2026-08-27 15:17:24] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-08-27 15:17:25] [INFO] [SeamlessUploader] [Type of vendors] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-27 15:17:27] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Clic en opción 'Preparation times' <<<
+[2026-08-27 15:17:28] [INFO] [SeamlessUploader] Clic en opción de acción: label:has-text("Preparation times")
+[2026-08-27 15:17:29] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-08-27 15:17:30] [INFO] [SeamlessUploader] [Type of action] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-08-27 15:17:32] [INFO] [SeamlessUploader] >>> PASO 4: Carga de Archivo CSV <<<
+[2026-08-27 15:17:35] [INFO] [SeamlessUploader] Archivo adjuntado correctamente: test_seamless_634433_20260827_151643.csv
+[2026-08-27 15:17:37] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-08-27 15:17:37] [INFO] [SeamlessUploader] Haciendo clic en botón final de confirmación.
+[2026-08-27 15:17:43] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\logs\seamless_success_20260827_151743.png
+[2026-08-27 15:17:43] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-08-27 15:56:39] [INFO] [MainPipeline] ============================================================
+[2026-08-27 15:56:39] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-08-27 15:56:39] [INFO] [MainPipeline] ============================================================
+[2026-08-27 15:56:39] [INFO] [MainPipeline] --- PASO 1: Consulta a BigQuery peya-bi-tools-pro (Lookback: 1 días) ---
+[2026-08-27 15:56:39] [INFO] [BigQueryExtractor] Autenticando con Application Default Credentials (ADC) en proyecto: peya-bi-tools-pro
+[2026-08-27 15:56:44] [INFO] [BigQueryExtractor] Ejecutando consulta en BigQuery (País: 2, Status: ON_LINE, Lookback: 1 días)...
+[2026-08-27 15:56:45] [ERROR] [BigQueryExtractor] Error al ejecutar la consulta en BigQuery: ('invalid_grant: Bad Request', {'error': 'invalid_grant', 'error_description': 'Bad Request'})
+[2026-08-27 15:56:45] [CRITICAL] [MainPipeline] El proceso falló con error: ('invalid_grant: Bad Request', {'error': 'invalid_grant', 'error_description': 'Bad Request'})
+Traceback (most recent call last):
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\main.py", line 43, in run_pipeline
+    df_raw = extractor.get_latest_vendors(days_lookback=days_lookback)
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\src\bq_client.py", line 86, in get_latest_vendors
+    query_job = self.client.query(query)
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 3624, in query
+    return _job_helpers.query_jobs_insert(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<8 lines>...
+        job_retry,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 205, in query_jobs_insert
+    future = do_query()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 151, in do_query
+    query_job._begin(retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\query.py", line 1489, in _begin
+    super(QueryJob, self)._begin(client=client, retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\base.py", line 825, in _begin
+    api_response = client._call_api(
+        retry,
+    ...<6 lines>...
+        timeout=timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 895, in _call_api
+    return call()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\_http\__init__.py", line 482, in api_request
+    response = self._make_request(
+        method=method,
+    ...<6 lines>...
+        extra_api_info=extra_api_info,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\_http\__init__.py", line 341, in _make_request
+    return self._do_request(
+           ~~~~~~~~~~~~~~~~^
+        method, url, headers, data, target_object, timeout=timeout
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\_http\__init__.py", line 379, in _do_request
+    return self.http.request(
+           ~~~~~~~~~~~~~~~~~^
+        url=url, method=method, headers=headers, data=data, timeout=timeout
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\auth\transport\requests.py", line 624, in request
+    self.credentials.before_request(auth_request, method, url, request_headers)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\auth\credentials.py", line 240, in before_request
+    self._blocking_refresh(request)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\auth\credentials.py", line 203, in _blocking_refresh
+    self.refresh(request)
+    ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\auth\credentials.py", line 517, in refresh
+    self._perform_refresh_token(request)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\oauth2\credentials.py", line 435, in _perform_refresh_token
+    ) = reauth.refresh_grant(
+        ~~~~~~~~~~~~~~~~~~~~^
+        request,
+        ^^^^^^^^
+    ...<6 lines>...
+        enable_reauth_refresh=self._enable_reauth_refresh,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\oauth2\reauth.py", line 370, in refresh_grant
+    _client._handle_error_response(response_data, retryable_error)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\oauth2\_client.py", line 73, in _handle_error_response
+    raise exceptions.RefreshError(
+        error_details, response_data, retryable=retryable_error
+    )
+google.auth.exceptions.RefreshError: ('invalid_grant: Bad Request', {'error': 'invalid_grant', 'error_description': 'Bad Request'})
+[2026-08-27 16:31:13] [INFO] [MainPipeline] ============================================================
+[2026-08-27 16:31:13] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-08-27 16:31:13] [INFO] [MainPipeline] ============================================================
+[2026-08-27 16:31:13] [INFO] [MainPipeline] --- PASO 1: Consulta a BigQuery peya-bi-tools-pro (Lookback: 1 días) ---
+[2026-08-27 16:31:13] [INFO] [BigQueryExtractor] Autenticando con Application Default Credentials (ADC) en proyecto: peya-bi-tools-pro
+[2026-08-27 16:31:20] [INFO] [BigQueryExtractor] Ejecutando consulta en BigQuery (País: 2, Status: ON_LINE, Lookback: 1 días)...
+[2026-08-27 16:31:24] [ERROR] [BigQueryExtractor] Error al ejecutar la consulta en BigQuery: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: 66fb3838-1aa0-43f6-8f8a-78d08934b99b
+
+[2026-08-27 16:31:24] [CRITICAL] [MainPipeline] El proceso falló con error: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: 66fb3838-1aa0-43f6-8f8a-78d08934b99b
+Traceback (most recent call last):
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\main.py", line 43, in run_pipeline
+    df_raw = extractor.get_latest_vendors(days_lookback=days_lookback)
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\src\bq_client.py", line 86, in get_latest_vendors
+    query_job = self.client.query(query)
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 3624, in query
+    return _job_helpers.query_jobs_insert(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<8 lines>...
+        job_retry,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 205, in query_jobs_insert
+    future = do_query()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 151, in do_query
+    query_job._begin(retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\query.py", line 1489, in _begin
+    super(QueryJob, self)._begin(client=client, retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\base.py", line 825, in _begin
+    api_response = client._call_api(
+        retry,
+    ...<6 lines>...
+        timeout=timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 895, in _call_api
+    return call()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\_http\__init__.py", line 494, in api_request
+    raise exceptions.from_http_response(response)
+google.api_core.exceptions.Forbidden: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: 66fb3838-1aa0-43f6-8f8a-78d08934b99b
+
+[2026-08-27 21:08:06] [INFO] [TestPipeline] ================================================================================
+[2026-08-27 21:08:06] [INFO] [TestPipeline] VALIDANDO NUEVA LÓGICA DE NEGOCIO Y JERARQUÍA DE REGLAS
+[2026-08-27 21:08:06] [INFO] [TestPipeline] ================================================================================
+[2026-08-27 21:08:06] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (70 reglas)...
+[2026-08-27 21:08:06] [INFO] [VendorTransformer] Reglas activas: 11 franquicias, 14 cuisines, 8 verticales, 36 palabras clave. Default: 15 min.
+[2026-08-27 21:08:06] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 7 partners...
+[2026-08-27 21:08:06] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'FRANCHISE': 1, 'CUISINE': 1, 'DEFAULT': 2, 'KEYWORD': 1, 'VERTICAL': 2}
+[2026-08-27 21:08:06] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_rules_suite_20260827_210806.csv
+[2026-08-27 21:08:06] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_rules_suite_20260827_210806.csv
+[2026-08-27 21:08:29] [INFO] [TestPipeline] ================================================================================
+[2026-08-27 21:08:29] [INFO] [TestPipeline] VALIDANDO NUEVA LÓGICA DE NEGOCIO Y JERARQUÍA DE REGLAS
+[2026-08-27 21:08:29] [INFO] [TestPipeline] ================================================================================
+[2026-08-27 21:08:29] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (82 reglas)...
+[2026-08-27 21:08:29] [INFO] [VendorTransformer] Reglas activas: 19 franquicias, 14 cuisines, 8 verticales, 40 palabras clave. Default: 15 min.
+[2026-08-27 21:08:29] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 7 partners...
+[2026-08-27 21:08:29] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'FRANCHISE': 1, 'CUISINE': 1, 'KEYWORD': 2, 'DEFAULT': 1, 'VERTICAL': 2}
+[2026-08-27 21:08:29] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_rules_suite_20260827_210829.csv
+[2026-08-27 21:08:29] [INFO] [TestPipeline] Archivo de prueba generado en: C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\data\output\test_rules_suite_20260827_210829.csv
+[2026-08-27 21:09:42] [INFO] [MainPipeline] ============================================================
+[2026-08-27 21:09:42] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-08-27 21:09:42] [INFO] [MainPipeline] ============================================================
+[2026-08-27 21:09:42] [INFO] [MainPipeline] --- PASO 1: Consulta a BigQuery peya-bi-tools-pro (Lookback: 1 días) ---
+[2026-08-27 21:09:42] [INFO] [BigQueryExtractor] Autenticando con Application Default Credentials (ADC) en proyecto: peya-bi-tools-pro
+[2026-08-27 21:09:46] [INFO] [BigQueryExtractor] Ejecutando consulta en BigQuery (País: 2, Status: ON_LINE, Lookback: 1 días)...
+[2026-08-27 21:09:49] [ERROR] [BigQueryExtractor] Error al ejecutar la consulta en BigQuery: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: 045910c9-96eb-4346-ad6f-e29b2cdaed52
+
+[2026-08-27 21:09:49] [CRITICAL] [MainPipeline] El proceso falló con error: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: 045910c9-96eb-4346-ad6f-e29b2cdaed52
+Traceback (most recent call last):
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\main.py", line 43, in run_pipeline
+    df_raw = extractor.get_latest_vendors(days_lookback=days_lookback)
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\src\bq_client.py", line 119, in get_latest_vendors
+    query_job = self.client.query(query)
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 3624, in query
+    return _job_helpers.query_jobs_insert(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<8 lines>...
+        job_retry,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 205, in query_jobs_insert
+    future = do_query()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 151, in do_query
+    query_job._begin(retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\query.py", line 1489, in _begin
+    super(QueryJob, self)._begin(client=client, retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\base.py", line 825, in _begin
+    api_response = client._call_api(
+        retry,
+    ...<6 lines>...
+        timeout=timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 895, in _call_api
+    return call()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\_http\__init__.py", line 494, in api_request
+    raise exceptions.from_http_response(response)
+google.api_core.exceptions.Forbidden: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: 045910c9-96eb-4346-ad6f-e29b2cdaed52
+
+[2026-08-27 21:18:09] [INFO] [TestBigQuery] ================================================================================
+[2026-08-27 21:18:09] [INFO] [TestBigQuery] PRUEBA AISLADA DE CONEXIÓN Y CONSULTA A BIGQUERY
+[2026-08-27 21:18:09] [INFO] [TestBigQuery] ================================================================================
+[2026-08-27 21:18:09] [INFO] [TestBigQuery] Proyecto GCP: peya-bi-tools-pro
+[2026-08-27 21:18:09] [INFO] [TestBigQuery] País ID: 2 (Chile / PY_CL)
+[2026-08-27 21:18:09] [INFO] [TestBigQuery] Días de lookback: 1
+[2026-08-27 21:18:09] [INFO] [TestBigQuery] ================================================================================
+[2026-08-27 21:18:09] [INFO] [BigQueryExtractor] Autenticando con Application Default Credentials (ADC) en proyecto: peya-bi-tools-pro
+[2026-08-27 21:18:11] [INFO] [TestBigQuery] --- Probando consulta básica a dim_partner (sin JOIN) ---
+[2026-08-27 21:18:11] [INFO] [TestBigQuery] Enviando query a BigQuery...
+[2026-08-27 21:18:15] [CRITICAL] [TestBigQuery] 
+[ERROR] Falló la consulta a BigQuery: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: 43ddbad7-b4d2-45c1-856d-9590f6a6ca45
+
+Traceback (most recent call last):
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\test_bigquery.py", line 79, in test_bigquery_connection_and_query
+    query_job = extractor.client.query(query)
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 3624, in query
+    return _job_helpers.query_jobs_insert(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<8 lines>...
+        job_retry,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 205, in query_jobs_insert
+    future = do_query()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 151, in do_query
+    query_job._begin(retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\query.py", line 1489, in _begin
+    super(QueryJob, self)._begin(client=client, retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\base.py", line 825, in _begin
+    api_response = client._call_api(
+        retry,
+    ...<6 lines>...
+        timeout=timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 895, in _call_api
+    return call()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\_http\__init__.py", line 494, in api_request
+    raise exceptions.from_http_response(response)
+google.api_core.exceptions.Forbidden: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: 43ddbad7-b4d2-45c1-856d-9590f6a6ca45
+

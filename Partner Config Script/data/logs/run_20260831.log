@@ -1,0 +1,84 @@
+[2026-08-31 11:21:52] [INFO] [TestBigQuery] ================================================================================
+[2026-08-31 11:21:52] [INFO] [TestBigQuery] PRUEBA AISLADA DE CONEXIÓN Y CONSULTA A BIGQUERY
+[2026-08-31 11:21:52] [INFO] [TestBigQuery] ================================================================================
+[2026-08-31 11:21:52] [INFO] [TestBigQuery] Proyecto GCP: peya-bi-tools-pro
+[2026-08-31 11:21:52] [INFO] [TestBigQuery] País ID: 2 (Chile / PY_CL)
+[2026-08-31 11:21:52] [INFO] [TestBigQuery] Días de lookback: 1
+[2026-08-31 11:21:52] [INFO] [TestBigQuery] ================================================================================
+[2026-08-31 11:21:52] [INFO] [BigQueryExtractor] Autenticando con Application Default Credentials (ADC) en proyecto: peya-bi-tools-pro
+[2026-08-31 11:22:04] [INFO] [TestBigQuery] --- Probando consulta básica a dim_partner (sin JOIN) ---
+[2026-08-31 11:22:04] [INFO] [TestBigQuery] Enviando query a BigQuery...
+[2026-08-31 11:22:09] [CRITICAL] [TestBigQuery] 
+[ERROR] Falló la consulta a BigQuery: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: e4c48872-15d5-44f8-8267-82e3672b0411
+
+Traceback (most recent call last):
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\test_bigquery.py", line 79, in test_bigquery_connection_and_query
+    query_job = extractor.client.query(query)
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 3624, in query
+    return _job_helpers.query_jobs_insert(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<8 lines>...
+        job_retry,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 205, in query_jobs_insert
+    future = do_query()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\_job_helpers.py", line 151, in do_query
+    query_job._begin(retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\query.py", line 1489, in _begin
+    super(QueryJob, self)._begin(client=client, retry=retry, timeout=timeout)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\job\base.py", line 825, in _begin
+    api_response = client._call_api(
+        retry,
+    ...<6 lines>...
+        timeout=timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\bigquery\client.py", line 895, in _call_api
+    return call()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+        target,
+    ...<3 lines>...
+        on_error=on_error,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 148, in retry_target
+    result = target()
+  File "C:\Users\cristian.alvarez\Desktop\GoogleAntigravity\venv\Lib\site-packages\google\cloud\_http\__init__.py", line 494, in api_request
+    raise exceptions.from_http_response(response)
+google.api_core.exceptions.Forbidden: 403 POST https://bigquery.googleapis.com/bigquery/v2/projects/peya-bi-tools-pro/jobs?prettyPrint=false: Access Denied: Project peya-bi-tools-pro: User does not have bigquery.jobs.create permission in project peya-bi-tools-pro.
+
+Location: None
+Job ID: e4c48872-15d5-44f8-8267-82e3672b0411
+

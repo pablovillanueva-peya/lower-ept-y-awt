@@ -1,0 +1,7 @@
+﻿partner_id,partner_name,registered_date,partner_status,cuisine,franchise_name,vertical_type,PREPTIME_CARGADO,CRITERIO_ASIGNACION
+638687,Guangdong 2,2026-09-10,ON_LINE,,,restaurants,15,DEFAULT (RESTAURANTS/COURIER 15 MIN)
+638728,Shawarma T.l,2026-09-10,ON_LINE,,,restaurants,20,KEYWORD (SHAWARMA)
+638646,Kocina Brava 695,2026-09-10,ON_LINE,,,restaurants,15,DEFAULT (RESTAURANTS/COURIER 15 MIN)
+638769,Kuzko Sushi --,2026-09-10,ON_LINE,,,courier_business,30,KEYWORD (SUSHI)
+638656,Chizu Rolls,2026-09-10,ON_LINE,,,restaurants,30,KEYWORD (ROLL)
+638638,Donde Merelo -- 940,2026-09-10,ON_LINE,,,courier_business,15,DEFAULT (RESTAURANTS/COURIER 15 MIN)

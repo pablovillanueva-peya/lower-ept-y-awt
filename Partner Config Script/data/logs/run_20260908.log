@@ -1,0 +1,57 @@
+[2026-09-08 14:52:16] [INFO] [MainPipeline] ======================================================================
+[2026-09-08 14:52:16] [INFO] [MainPipeline] INICIANDO PROCESO DIARIO DE PREPTIME (SEAMLESS BULK UPDATES)
+[2026-09-08 14:52:16] [INFO] [MainPipeline] ======================================================================
+[2026-09-08 14:52:16] [INFO] [MainPipeline] --- PASO 1: Buscando archivo del dia de hoy en 'data_vendors_drive' ---
+[2026-09-08 14:52:16] [INFO] [DriveVendorReader] Archivo de hoy encontrado: Reporte_Query_20260908_090543.csv (Ruta: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data_vendors_drive\Reporte_Query_20260908_090543.csv)
+[2026-09-08 14:52:16] [INFO] [DriveVendorReader] Leyendo archivo de vendors: Reporte_Query_20260908_090543.csv...
+[2026-09-08 14:52:16] [INFO] [DriveVendorReader] Archivo leido correctamente. Filas encontradas: 6
+[2026-09-08 14:52:16] [INFO] [DriveVendorReader] Columnas mapeadas para procesamiento: ['partner_id', 'partner_name', 'registered_date', 'partner_status', 'cuisine', 'franchise_name', 'vertical_type']
+[2026-09-08 14:52:16] [INFO] [MainPipeline] --- PASO 2: Aplicando Reglas de Preptime y Generando Resultados ---
+[2026-09-08 14:52:16] [INFO] [VendorTransformer] Cargando reglas de negocio desde rules_preptime.csv (89 reglas)...
+[2026-09-08 14:52:16] [INFO] [VendorTransformer] Reglas activas: 20 franquicias, 16 cuisines, 8 verticales, 44 palabras clave. Default: 15 min.
+[2026-09-08 14:52:16] [INFO] [VendorTransformer] Aplicando reglas de preptime sobre 6 partners...
+[2026-09-08 14:52:16] [INFO] [VendorTransformer] Distribución de asignación de preptime: {'KEYWORD': 2, 'DEFAULT': 4}
+[2026-09-08 14:52:16] [INFO] [VendorTransformer] CSV de Seamless generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260908_145216.csv
+[2026-09-08 14:52:16] [INFO] [VendorTransformer] Archivo de auditoría/resultados generado exitosamente: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\reporte_auditoria_vendors_20260908_145216.csv
+[2026-09-08 14:52:16] [INFO] [MainPipeline] ======================================================================
+[2026-09-08 14:52:16] [INFO] [MainPipeline] ARCHIVOS GENERADOS:
+[2026-09-08 14:52:16] [INFO] [MainPipeline] 1. CSV para Seamless: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260908_145216.csv
+[2026-09-08 14:52:16] [INFO] [MainPipeline] 2. Reporte de Auditoria Completo: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\reporte_auditoria_vendors_20260908_145216.csv
+[2026-09-08 14:52:16] [INFO] [MainPipeline] ======================================================================
+[2026-09-08 14:52:16] [INFO] [MainPipeline] --- PASO 3: Carga en Seamless Dashboard (PedidosYa Portal) ---
+[2026-09-08 14:52:16] [INFO] [SeamlessUploader] Iniciando navegador Playwright (Headless=False)...
+[2026-09-08 14:52:16] [INFO] [SeamlessUploader] Ruta del CSV a cargar: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\output\seamless_bulk_upload_20260908_145216.csv
+[2026-09-08 14:52:32] [INFO] [SeamlessUploader] Navegando a: https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/main
+[2026-09-08 14:52:37] [INFO] [SeamlessUploader] Pantalla de autenticación Okta / SSO detectada.
+[2026-09-08 14:52:37] [INFO] [SeamlessUploader] Esperando confirmación de inicio de sesión Okta (PIN / MFA / Push / redirección)...
+👉 Si aparece la solicitud en tu pantalla o teléfono, por favor confírmala.
+[2026-09-08 14:52:50] [INFO] [SeamlessUploader] Autenticación completada. Acceso concedido al portal.
+[2026-09-08 14:52:50] [INFO] [SeamlessUploader] ⏳ Esperando 7 segundos para que carguen todos los componentes de la URL main...
+[2026-09-08 14:52:59] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-09-08 14:52:59] [INFO] [SeamlessUploader] Navegando a 'Mass updates'...
+[2026-09-08 14:53:01] [INFO] [SeamlessUploader] Clic en 'Mass updates': div:has-text("Mass updates")
+[2026-09-08 14:53:03] [INFO] [SeamlessUploader] Buscando opción 'Upload CSV'...
+[2026-09-08 14:53:05] [INFO] [SeamlessUploader] Clic en 'Upload CSV': a:has-text("Upload CSV")
+[2026-09-08 14:53:07] [INFO] [SeamlessUploader] ⏳ Pausa de 5 segundos para carga completa de componentes...
+[2026-09-08 14:53:14] [INFO] [SeamlessUploader] Detectado iframe de Seamless (iframe.pluginIframe).
+[2026-09-08 14:53:14] [INFO] [SeamlessUploader] >>> PASO 1: Platform Country -> Escribir 'PY_CL' y seleccionar coincidencia <<<
+[2026-09-08 14:53:16] [INFO] [SeamlessUploader] Haciendo clic en la coincidencia del menú desplegable: [class*="option"]:has-text("PY_CL")
+[2026-09-08 14:53:18] [INFO] [SeamlessUploader] [Platform Country] Buscando botón 'Continue'...
+[2026-09-08 14:53:19] [INFO] [SeamlessUploader] [Platform Country] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-08 14:53:21] [INFO] [SeamlessUploader] >>> PASO 2: Type of vendors -> Clic en botón 'OD Vendors' <<<
+[2026-09-08 14:53:23] [INFO] [SeamlessUploader] Clic en botón de 'OD Vendors': button:has-text("OD Vendors")
+[2026-09-08 14:53:24] [INFO] [SeamlessUploader] [Type of vendors] Buscando botón 'Continue'...
+[2026-09-08 14:53:25] [INFO] [SeamlessUploader] [Type of vendors] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-08 14:53:27] [INFO] [SeamlessUploader] >>> PASO 3: Type of action -> Clic en opción 'Preparation times' <<<
+[2026-09-08 14:53:28] [INFO] [SeamlessUploader] Clic en opción de acción: label:has-text("Preparation times")
+[2026-09-08 14:53:30] [INFO] [SeamlessUploader] [Type of action] Buscando botón 'Continue'...
+[2026-09-08 14:53:31] [INFO] [SeamlessUploader] [Type of action] Clic en 'Continue' (<Locator frame=<Frame name= url='https://ops-portal.pedidosya.com/pv2/cl/p/logistics-seamless#/bulk-updates'> selector='iframe.pluginIframe >> nth=0 >> internal:control=enter-frame >> button:has-text("Continue") >> nth=0'>).
+[2026-09-08 14:53:33] [INFO] [SeamlessUploader] >>> PASO 4: Carga de Archivo CSV <<<
+[2026-09-08 14:53:35] [INFO] [SeamlessUploader] Archivo adjuntado correctamente: seamless_bulk_upload_20260908_145216.csv
+[2026-09-08 14:53:37] [INFO] [SeamlessUploader] Buscando botón final de confirmación/subida...
+[2026-09-08 14:53:37] [INFO] [SeamlessUploader] Haciendo clic en botón final de confirmación.
+[2026-09-08 14:53:44] [INFO] [SeamlessUploader] Captura de pantalla final guardada en: C:\Users\cristian.alvarez\Desktop\Proyectos\PartnerConfigs\data\logs\seamless_success_20260908_145343.png
+[2026-09-08 14:53:44] [INFO] [SeamlessUploader] ¡Proceso de Seamless Bulk Updates completado exitosamente!
+[2026-09-08 14:53:46] [INFO] [MainPipeline] ======================================================================
+[2026-09-08 14:53:46] [INFO] [MainPipeline] PROCESO COMPLETADO EXITOSAMENTE
+[2026-09-08 14:53:46] [INFO] [MainPipeline] ======================================================================
